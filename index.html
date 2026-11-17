@@ -29,7 +29,6 @@
             <button class="header-link hidden" id="header-feed" type="button" data-view="feed">Feed</button>
             <button class="header-link hidden" id="header-donations" type="button" data-view="donations">Cadastrar</button>
             <button class="header-link hidden" id="header-messages" type="button" data-view="messages">Mensagens</button>
-            <span class="header-user hidden" id="header-user" aria-live="polite"></span>
             <button class="header-link hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta">Sair</button>
             <span class="header-note">Solidariedade que transforma</span>
           </div>
@@ -400,6 +399,17 @@
         <small>Projeto acadêmico - Engenharia de Computação</small>
       </div>
     </footer>
+    <button id="profile-avatar-button" class="profile-avatar-button hidden" type="button">
+      <span id="profile-avatar-initials" class="profile-avatar-initials"></span>
+      <img id="profile-avatar-image" class="profile-avatar-image hidden" alt="" />
+      <span class="profile-avatar-camera" aria-hidden="true">📷</span>
+    </button>
+    <input
+      id="profile-avatar-input"
+      class="hidden"
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+    />
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/app.js"></script>
   </body>

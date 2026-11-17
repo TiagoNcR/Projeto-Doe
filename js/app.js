@@ -60,13 +60,8 @@ function navigate(view) {
   document.getElementById('header-feed').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-donations').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-messages').classList.toggle('hidden', !currentUserData);
-  const headerUser = document.getElementById('header-user');
-  const accountEmail = currentUserData ? currentUserData.email : '';
-  headerUser.textContent = currentUserData ? `Conta: ${accountEmail}` : '';
-  headerUser.title = currentUserData ? `${currentUserData.name} (${accountEmail})` : '';
-  headerUser.setAttribute('aria-label', currentUserData ? `Conta conectada: ${currentUserData.name}, ${accountEmail}` : '');
-  headerUser.classList.toggle('hidden', !currentUserData);
   document.getElementById('header-logout').classList.toggle('hidden', !currentUserData);
+  renderProfileAvatar();
   alertArea.innerHTML = '';
   if (view === 'dashboard') updateDashboard();
   if (view === 'feed') loadFeed();
@@ -98,6 +93,35 @@ function initials(name) {
   return name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
 }
 
+function avatarMarkup(name, avatarUrl, className) {
+  const content = avatarUrl
+    ? `<img src="${escapeHTML(avatarUrl)}" alt="">`
+    : escapeHTML(initials(name));
+  return `<div class="${className}" role="img" aria-label="Foto de perfil de ${escapeHTML(name)}">${content}</div>`;
+}
+
+function renderProfileAvatar() {
+  const button = document.getElementById('profile-avatar-button');
+  const initialsElement = document.getElementById('profile-avatar-initials');
+  const image = document.getElementById('profile-avatar-image');
+  const isLoggedIn = Boolean(currentUserData);
+
+  button.classList.toggle('hidden', !isLoggedIn);
+  if (!isLoggedIn) {
+    image.removeAttribute('src');
+    return;
+  }
+
+  const avatarUrl = currentUserData.avatarUrl || '';
+  initialsElement.textContent = initials(currentUserData.name);
+  initialsElement.classList.toggle('hidden', Boolean(avatarUrl));
+  image.classList.toggle('hidden', !avatarUrl);
+  if (avatarUrl) image.src = avatarUrl;
+  else image.removeAttribute('src');
+  button.title = `Alterar foto de ${currentUserData.name}`;
+  button.setAttribute('aria-label', `Alterar foto de perfil de ${currentUserData.name}`);
+}
+
 function timeLabel(date) {
   const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
   if (minutes < 1) return 'agora';
@@ -118,7 +142,7 @@ async function loadFeed() {
     document.getElementById('stories').innerHTML = uniqueOwners.length
       ? uniqueOwners.map(item => `
           <article class="story">
-            <div class="story-avatar">${escapeHTML(initials(item.ownerName))}</div>
+            ${avatarMarkup(item.ownerName, item.ownerAvatarUrl, 'story-avatar')}
             <span>${escapeHTML(item.ownerName.split(' ')[0])}</span>
           </article>
         `).join('')
@@ -144,7 +168,7 @@ async function loadFeed() {
       <article class="social-post ${isDonation ? 'donation-post' : 'community-post'}">
         <header class="post-header">
           <div class="post-author">
-            <div class="post-avatar">${escapeHTML(initials(item.ownerName))}</div>
+            ${avatarMarkup(item.ownerName, item.ownerAvatarUrl, 'post-avatar')}
             <div><strong>${escapeHTML(item.ownerName)}</strong><small>${isDonation ? `${escapeHTML(item.category)} · ${escapeHTML(item.size)}` : 'Publicação da comunidade'}</small></div>
           </div>
           <div class="post-header-actions">
@@ -223,7 +247,7 @@ function renderConversationList() {
       : 'Clique para iniciar uma conversa';
     return `
       <button class="conversation-button ${contact.id === activeConversationId ? 'active' : ''}" type="button" data-chat-user="${escapeHTML(contact.id)}">
-        <span class="conversation-avatar">${escapeHTML(initials(contact.name))}</span>
+        ${avatarMarkup(contact.name, contact.avatarUrl, 'conversation-avatar')}
         <span class="conversation-summary">
           <strong>${escapeHTML(contact.name)}</strong>
           <small>${escapeHTML(preview)}</small>
@@ -495,6 +519,41 @@ function readImage(file) {
     reader.readAsDataURL(file);
   });
 }
+
+document.getElementById('profile-avatar-button').addEventListener('click', () => {
+  document.getElementById('profile-avatar-input').click();
+});
+
+document.getElementById('profile-avatar-input').addEventListener('change', async event => {
+  const input = event.currentTarget;
+  const file = input.files[0];
+  if (!file) return;
+
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!allowedTypes.includes(file.type) || file.size > 2 * 1024 * 1024) {
+    showAlert('Escolha uma foto PNG, JPG ou WebP de até 2 MB.', 'warning');
+    input.value = '';
+    return;
+  }
+
+  try {
+    const data = await api('/api/auth/avatar', {
+      method: 'PUT',
+      body: JSON.stringify({ image: await readImage(file) })
+    });
+    currentUserData = data.user;
+    renderProfileAvatar();
+    if (!document.getElementById('feed-view').classList.contains('hidden')) await loadFeed();
+    if (!document.getElementById('messages-view').classList.contains('hidden')) {
+      await loadConversations(activeConversationId);
+    }
+    showAlert('Foto de perfil atualizada.');
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  } finally {
+    input.value = '';
+  }
+});
 
 document.getElementById('item-image').addEventListener('change', event => {
   previewImage(event, 'image-preview');

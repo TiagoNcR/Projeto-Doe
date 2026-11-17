@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
+const { avatarUrl } = require('../utils/serializers');
 
 function getContact(userId) {
   const contact = getDatabase().users.find(item => item.id === userId);
@@ -26,6 +27,7 @@ function listConversations(user) {
         id: contact.id,
         name: contact.name,
         type: contact.type,
+        avatarUrl: avatarUrl(contact),
         lastMessage: latest ? latest.text : '',
         lastMessageAt: latest ? latest.createdAt : '',
         lastMessageFromMe: Boolean(latest && latest.senderId === user.id)

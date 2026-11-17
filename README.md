@@ -13,6 +13,7 @@ Aplicação demonstrativa de uma comunidade para doação de roupas. Participant
 - Opção para seguir e deixar de seguir participantes.
 - Filtro do feed para ver todas as publicações ou somente as pessoas seguidas.
 - Conversas privadas persistentes entre participantes, acessíveis pelo feed ou pela área **Mensagens**.
+- Foto de perfil atualizável pelo avatar fixo no canto inferior esquerdo, exibida no feed e nas conversas.
 - Gerenciamento e exclusão das próprias doações.
 - Persistência local no arquivo `data.json`.
 
@@ -55,6 +56,7 @@ PORT=3001 npm start
 5. Use **Mensagem** em uma publicação ou abra **Mensagens** para iniciar uma conversa privada. As mensagens novas são verificadas periodicamente enquanto a área está aberta.
 6. Curta ou comente publicações e doações. Para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
 7. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
+8. Clique no avatar fixo no canto inferior esquerdo para escolher ou alterar sua foto de perfil. São aceitas imagens PNG, JPG ou WebP de até 2 MB; sem foto, o avatar mostra as iniciais.
 
 ## Persistência dos dados
 
@@ -72,6 +74,8 @@ As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, 
 | `POST` | `/api/auth/register` | Cria uma conta e inicia uma sessão. |
 | `POST` | `/api/auth/login` | Inicia uma sessão. |
 | `POST` | `/api/auth/logout` | Encerra a sessão atual. |
+| `PUT` | `/api/auth/avatar` | Atualiza a foto de perfil da sessão atual. |
+| `GET` | `/api/users/:id/avatar` | Retorna a foto de perfil de um participante autenticado. |
 | `GET` | `/api/feed` | Lista as doações e publicações da comunidade. |
 | `GET` | `/api/feed?filter=following` | Lista as publicações das pessoas seguidas pela conta atual. |
 | `POST` | `/api/donations` | Publica uma doação. |

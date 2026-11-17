@@ -1,5 +1,5 @@
 const authService = require('../services/authService');
-const { clearSessionCookie, currentUser, sessionId, setSessionCookie } = require('../middleware/session');
+const { clearSessionCookie, currentUser, requireUser, sessionId, setSessionCookie } = require('../middleware/session');
 const { readJson, sendJson } = require('../utils/http');
 const { safeUser } = require('../utils/serializers');
 
@@ -20,10 +20,27 @@ async function login(req, res) {
   sendJson(res, 200, { user: safeUser(result.user) });
 }
 
+async function updateAvatar(req, res) {
+  const user = requireUser(req, 'Faça login para alterar sua foto de perfil.');
+  const body = await readJson(req);
+  sendJson(res, 200, { user: safeUser(authService.updateProfileImage(user, body.image)) });
+}
+
+function avatar(req, res, userId) {
+  requireUser(req, 'Faça login para visualizar fotos de perfil.');
+  const image = authService.getProfileImage(userId);
+  res.writeHead(200, {
+    'Content-Type': image.contentType,
+    'Cache-Control': 'private, max-age=300',
+    'X-Content-Type-Options': 'nosniff'
+  });
+  res.end(image.buffer);
+}
+
 function logout(req, res) {
   authService.logout(sessionId(req));
   clearSessionCookie(res);
   sendJson(res, 200, { ok: true });
 }
 
-module.exports = { login, logout, me, register };
+module.exports = { avatar, login, logout, me, register, updateAvatar };
