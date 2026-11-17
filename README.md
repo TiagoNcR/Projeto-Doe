@@ -1,0 +1,108 @@
+# Projeto Doe
+
+Aplicação demonstrativa de uma comunidade para doação de roupas. Participantes podem criar uma conta, publicar doações e interagir com as publicações no feed.
+
+## Funcionalidades
+
+- Cadastro, login e logout de participantes.
+- Perfil de participação: doador, beneficiário ou ambos.
+- Feed comunitário com publicações de doações.
+- Cadastro de roupas com categoria, tamanho, condição, descrição e foto opcional.
+- Curtidas e comentários nas publicações.
+- Opção para seguir e deixar de seguir participantes.
+- Filtro do feed para ver todas as publicações ou somente as pessoas seguidas.
+- Gerenciamento e exclusão das próprias doações.
+- Persistência local no arquivo `data.json`.
+
+## Requisitos
+
+- Node.js 20 ou superior.
+- npm, incluído com o Node.js.
+
+O projeto não possui dependências npm externas. O Bootstrap e a fonte usados na interface são carregados por CDN, então esses recursos precisam de conexão com a internet.
+
+## Como executar
+
+No terminal, a partir da pasta do projeto:
+
+```bash
+npm start
+```
+
+O servidor inicia em `http://localhost:3000`. Abra esse endereço no navegador; não abra o arquivo `index.html` diretamente, pois o frontend utiliza a API do servidor.
+
+Para usar outra porta:
+
+```powershell
+$env:PORT=3001
+npm start
+```
+
+Em macOS ou Linux:
+
+```bash
+PORT=3001 npm start
+```
+
+## Como usar
+
+1. Abra a aplicação e crie uma conta na opção **Cadastre-se**.
+2. No feed, use **Nova doação** para publicar uma peça.
+3. Use **Seguir** em uma publicação para acompanhar aquele participante. A aba **Seguindo** mostra as publicações de quem você segue.
+4. Curta ou comente as publicações. Para gerenciar suas peças, acesse **Cadastrar**.
+5. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
+
+## Persistência dos dados
+
+O servidor lê e grava usuários, sessões, doações, curtidas, comentários e relações de quem cada participante segue em `data.json`. Esse arquivo é criado na pasta do projeto e seus dados permanecem após reiniciar o servidor.
+
+Faça uma cópia de segurança de `data.json` antes de removê-lo ou substituí-lo. Apagar esse arquivo reinicializa os dados da aplicação. Como ele pode conter informações de contas e publicações, não compartilhe nem publique uma cópia preenchida com dados reais.
+
+## API principal
+
+As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, curtida, comentário, seguir e exclusão exigem uma sessão, criada por cookie HTTP. Cadastro e login criam essa sessão.
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `GET` | `/api/me` | Retorna o participante da sessão atual, ou `null`. |
+| `POST` | `/api/auth/register` | Cria uma conta e inicia uma sessão. |
+| `POST` | `/api/auth/login` | Inicia uma sessão. |
+| `POST` | `/api/auth/logout` | Encerra a sessão atual. |
+| `GET` | `/api/feed` | Lista as doações da comunidade. |
+| `GET` | `/api/feed?filter=following` | Lista doações das pessoas seguidas pela conta atual. |
+| `POST` | `/api/donations` | Publica uma doação. |
+| `DELETE` | `/api/donations/:id` | Exclui uma doação própria. |
+| `POST` | `/api/donations/:id/like` | Alterna a curtida na doação. |
+| `POST` | `/api/donations/:id/comments` | Adiciona um comentário. |
+| `POST` | `/api/users/:id/follow` | Alterna entre seguir e deixar de seguir um participante. |
+
+As rotas `POST` que recebem dados usam JSON. Por exemplo, para cadastrar uma doação:
+
+```json
+{
+  "name": "Casaco de lã",
+  "category": "Casacos",
+  "size": "M",
+  "condition": "Boa",
+  "description": "Em bom estado",
+  "image": ""
+}
+```
+
+## Estrutura do projeto
+
+```text
+.
+├── css/
+│   └── style.css   # estilos da interface
+├── js/
+│   └── app.js      # navegação, feed e chamadas à API
+├── data.json       # persistência local
+├── index.html      # páginas da aplicação
+├── package.json    # comando de inicialização
+└── server.js       # servidor HTTP e API
+```
+
+## Limitações
+
+Este projeto é uma demonstração acadêmica: o armazenamento em arquivo JSON atende a um uso local e pequeno, mas não oferece as garantias de concorrência, escalabilidade ou disponibilidade de um banco de dados e hospedagem de produção. Para disponibilizá-lo a várias pessoas pela internet, configure hospedagem, HTTPS, armazenamento adequado, backups e controles de segurança adicionais.
