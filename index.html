@@ -28,6 +28,7 @@
           <div class="header-actions">
             <button class="header-link hidden" id="header-feed" type="button" data-view="feed">Feed</button>
             <button class="header-link hidden" id="header-donations" type="button" data-view="donations">Cadastrar</button>
+            <button class="header-link hidden" id="header-messages" type="button" data-view="messages">Mensagens</button>
             <button class="header-link hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta">Sair</button>
             <span class="header-note">Solidariedade que transforma</span>
           </div>
@@ -232,6 +233,46 @@
         </div>
         <div id="stories" class="stories-row"></div>
         <div id="feed-list" class="feed-list"></div>
+      </section>
+
+      <!-- MENSAGENS -->
+      <section id="messages-view" class="hidden">
+        <div class="feed-heading">
+          <div>
+            <span class="eyebrow">CONVERSAS PRIVADAS</span>
+            <h1>Mensagens</h1>
+          </div>
+          <button class="btn btn-outline-doe" type="button" data-view="feed">Voltar ao feed</button>
+        </div>
+        <div class="chat-layout">
+          <aside class="chat-sidebar">
+            <h2>Participantes</h2>
+            <div id="conversation-list" class="conversation-list"></div>
+          </aside>
+          <section class="chat-panel" aria-label="Conversa">
+            <div id="chat-placeholder" class="chat-placeholder">
+              Escolha um participante para iniciar uma conversa.
+            </div>
+            <div id="active-chat" class="active-chat hidden">
+              <header class="chat-header">
+                <strong id="chat-title">Conversa</strong>
+                <small>Mensagens privadas</small>
+              </header>
+              <div id="chat-history" class="chat-history" aria-live="polite"></div>
+              <form id="chat-form" class="chat-form">
+                <input
+                  id="chat-input"
+                  type="text"
+                  maxlength="1000"
+                  placeholder="Escreva uma mensagem..."
+                  aria-label="Mensagem"
+                  required
+                />
+                <button type="submit">Enviar</button>
+              </form>
+            </div>
+          </section>
+        </div>
       </section>
 
       <!-- DOAÇÕES -->

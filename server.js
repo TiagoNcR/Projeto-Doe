@@ -8,7 +8,7 @@ const ROOT = __dirname;
 const DB_FILE = path.join(ROOT, 'data.json');
 
 function defaultDb() {
-  return { users: [], donations: [], sessions: [] };
+  return { users: [], donations: [], sessions: [], messages: [] };
 }
 
 function readDb() {
@@ -20,6 +20,7 @@ function readDb() {
 }
 
 let db = readDb();
+if (!Array.isArray(db.messages)) db.messages = [];
 
 function writeDb() {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
@@ -242,6 +243,91 @@ async function handleApi(req, res, url) {
     sendJson(res, 200, {
       following: user.following.includes(target.id)
     });
+    return;
+  }
+
+  if (req.method === 'GET' && url === '/api/conversations') {
+    const user = currentUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: 'Faça login para acessar suas mensagens.' });
+      return;
+    }
+    const conversations = db.users
+      .filter(contact => contact.id !== user.id)
+      .map(contact => {
+        const messages = db.messages.filter(message =>
+          (message.senderId === user.id && message.recipientId === contact.id) ||
+          (message.senderId === contact.id && message.recipientId === user.id)
+        );
+        const latest = messages[messages.length - 1];
+        return {
+          id: contact.id,
+          name: contact.name,
+          type: contact.type,
+          lastMessage: latest ? latest.text : '',
+          lastMessageAt: latest ? latest.createdAt : '',
+          lastMessageFromMe: Boolean(latest && latest.senderId === user.id)
+        };
+      })
+      .sort((left, right) =>
+        (Date.parse(right.lastMessageAt) || 0) - (Date.parse(left.lastMessageAt) || 0) ||
+        left.name.localeCompare(right.name, 'pt-BR')
+      );
+    sendJson(res, 200, { conversations });
+    return;
+  }
+
+  const messagesMatch = url.match(/^\/api\/conversations\/([^/]+)\/messages$/);
+  if (messagesMatch && (req.method === 'GET' || req.method === 'POST')) {
+    const user = currentUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: 'Faça login para acessar suas mensagens.' });
+      return;
+    }
+    const contact = db.users.find(item => item.id === messagesMatch[1]);
+    if (!contact) {
+      sendJson(res, 404, { error: 'Participante não encontrado.' });
+      return;
+    }
+    if (contact.id === user.id) {
+      sendJson(res, 400, { error: 'Não é possível abrir uma conversa consigo mesmo.' });
+      return;
+    }
+
+    if (req.method === 'GET') {
+      const messages = db.messages
+        .filter(message =>
+          (message.senderId === user.id && message.recipientId === contact.id) ||
+          (message.senderId === contact.id && message.recipientId === user.id)
+        )
+        .map(message => ({
+          ...message,
+          senderName: db.users.find(item => item.id === message.senderId)?.name || 'Participante'
+        }));
+      sendJson(res, 200, { messages });
+      return;
+    }
+
+    try {
+      const body = await readJson(req);
+      const text = String(body.text || '').trim();
+      if (!text || text.length > 1000) {
+        sendJson(res, 400, { error: 'A mensagem deve ter entre 1 e 1000 caracteres.' });
+        return;
+      }
+      const message = {
+        id: crypto.randomUUID(),
+        senderId: user.id,
+        recipientId: contact.id,
+        text,
+        createdAt: new Date().toISOString()
+      };
+      db.messages.push(message);
+      writeDb();
+      sendJson(res, 201, { message: { ...message, senderName: user.name } });
+    } catch (error) {
+      sendJson(res, 400, { error: error.message });
+    }
     return;
   }
 

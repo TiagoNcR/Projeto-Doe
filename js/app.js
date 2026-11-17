@@ -1,8 +1,11 @@
-const views = ['login', 'register', 'dashboard', 'feed', 'donations'];
+const views = ['login', 'register', 'dashboard', 'feed', 'messages', 'donations'];
 const alertArea = document.getElementById('alert-area');
 let currentUserData = null;
 let feedDonations = [];
 let feedFilter = 'all';
+let conversationContacts = [];
+let activeConversationId = null;
+let messageRefreshTimer = null;
 
 function escapeHTML(value = '') {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -46,18 +49,27 @@ async function logoutUser() {
 
 function navigate(view) {
   if (!views.includes(view)) return;
-  if (['dashboard', 'feed', 'donations'].includes(view) && !currentUserData) view = 'login';
+  if (['dashboard', 'feed', 'messages', 'donations'].includes(view) && !currentUserData) view = 'login';
+  if (messageRefreshTimer) {
+    clearInterval(messageRefreshTimer);
+    messageRefreshTimer = null;
+  }
   views.forEach(name => {
     document.getElementById(`${name}-view`).classList.toggle('hidden', name !== view);
   });
   document.getElementById('header-feed').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-donations').classList.toggle('hidden', !currentUserData);
+  document.getElementById('header-messages').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-logout').classList.toggle('hidden', !currentUserData);
   alertArea.innerHTML = '';
   if (view === 'dashboard') updateDashboard();
   if (view === 'feed') loadFeed();
+  if (view === 'messages') {
+    loadConversations(activeConversationId);
+    messageRefreshTimer = setInterval(refreshChat, 4000);
+  }
   if (view === 'donations') loadMyDonations();
-  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : 'Doações'}`;
+  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'messages' ? 'Mensagens' : 'Doações'}`;
   history.replaceState(null, '', view === 'login' ? '/' : `#${view}`);
 }
 
@@ -122,7 +134,7 @@ async function loadFeed() {
           </div>
           <div class="post-header-actions">
             ${item.ownerId !== currentUserData.id
-              ? `<button class="follow-button ${item.followingOwner ? 'following' : ''}" type="button" data-follow="${escapeHTML(item.ownerId)}">${item.followingOwner ? 'Seguindo' : 'Seguir'}</button>`
+              ? `<button class="message-button" type="button" data-message-user="${escapeHTML(item.ownerId)}">Mensagem</button><button class="follow-button ${item.followingOwner ? 'following' : ''}" type="button" data-follow="${escapeHTML(item.ownerId)}">${item.followingOwner ? 'Seguindo' : 'Seguir'}</button>`
               : '<span class="my-post-label">Sua publicação</span>'}
             <small>${escapeHTML(timeLabel(item.createdAt))}</small>
           </div>
@@ -181,6 +193,78 @@ async function loadMyDonations() {
   }
 }
 
+function renderConversationList() {
+  const list = document.getElementById('conversation-list');
+  const scrollTop = list.scrollTop;
+  if (!conversationContacts.length) {
+    list.innerHTML = '<p class="muted conversation-empty">Ainda não há outros participantes cadastrados.</p>';
+    return;
+  }
+  list.innerHTML = conversationContacts.map(contact => {
+    const preview = contact.lastMessage
+      ? `${contact.lastMessageFromMe ? 'Você: ' : ''}${contact.lastMessage}`
+      : 'Clique para iniciar uma conversa';
+    return `
+      <button class="conversation-button ${contact.id === activeConversationId ? 'active' : ''}" type="button" data-chat-user="${escapeHTML(contact.id)}">
+        <span class="conversation-avatar">${escapeHTML(initials(contact.name))}</span>
+        <span class="conversation-summary">
+          <strong>${escapeHTML(contact.name)}</strong>
+          <small>${escapeHTML(preview)}</small>
+        </span>
+        ${contact.lastMessageAt ? `<time>${escapeHTML(timeLabel(contact.lastMessageAt))}</time>` : ''}
+      </button>
+    `;
+  }).join('');
+  list.scrollTop = scrollTop;
+}
+
+async function loadConversationMessages(contactId) {
+  if (!contactId || contactId !== activeConversationId) return;
+  try {
+    const data = await api(`/api/conversations/${contactId}/messages`);
+    if (contactId !== activeConversationId) return;
+    const history = document.getElementById('chat-history');
+    const isNewConversation = history.dataset.conversationId !== contactId;
+    const wasNearBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 80;
+    history.innerHTML = data.messages.length
+      ? data.messages.map(message => `
+          <article class="message-bubble ${message.senderId === currentUserData.id ? 'mine' : ''}">
+            <p>${escapeHTML(message.text)}</p>
+            <time>${escapeHTML(timeLabel(message.createdAt))}</time>
+          </article>
+        `).join('')
+      : '<p class="chat-empty">Ainda não há mensagens. Envie a primeira!</p>';
+    history.dataset.conversationId = contactId;
+    if (isNewConversation || wasNearBottom) history.scrollTop = history.scrollHeight;
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  }
+}
+
+async function loadConversations(selectedId = activeConversationId) {
+  try {
+    const data = await api('/api/conversations');
+    conversationContacts = data.conversations;
+    activeConversationId = conversationContacts.some(contact => contact.id === selectedId) ? selectedId : null;
+    renderConversationList();
+
+    const contact = conversationContacts.find(item => item.id === activeConversationId);
+    document.getElementById('chat-placeholder').classList.toggle('hidden', Boolean(contact));
+    document.getElementById('active-chat').classList.toggle('hidden', !contact);
+    if (contact) {
+      document.getElementById('chat-title').textContent = contact.name;
+      await loadConversationMessages(contact.id);
+    }
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  }
+}
+
+async function refreshChat() {
+  if (document.getElementById('messages-view').classList.contains('hidden')) return;
+  await loadConversations(activeConversationId);
+}
+
 document.addEventListener('click', async event => {
   const logoutButton = event.target.closest('[data-logout]');
   if (logoutButton) {
@@ -191,6 +275,17 @@ document.addEventListener('click', async event => {
   if (viewButton) {
     event.preventEvent?.();
     navigate(viewButton.dataset.view);
+  }
+
+  const messageButton = event.target.closest('[data-message-user]');
+  if (messageButton) {
+    activeConversationId = messageButton.dataset.messageUser;
+    navigate('messages');
+  }
+
+  const conversationButton = event.target.closest('[data-chat-user]');
+  if (conversationButton) {
+    await loadConversations(conversationButton.dataset.chatUser);
   }
 
   const deleteButton = event.target.closest('[data-delete]');
@@ -245,6 +340,22 @@ document.addEventListener('submit', async event => {
         body: JSON.stringify({ text: input.value })
       });
       await loadFeed();
+    } catch (error) {
+      showAlert(error.message, 'danger');
+    }
+  }
+
+  if (event.target.matches('.chat-form')) {
+    event.preventDefault();
+    const input = document.getElementById('chat-input');
+    try {
+      await api(`/api/conversations/${activeConversationId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ text: input.value })
+      });
+      input.value = '';
+      await loadConversations(activeConversationId);
+      input.focus();
     } catch (error) {
       showAlert(error.message, 'danger');
     }

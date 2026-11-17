@@ -11,6 +11,7 @@ Aplicação demonstrativa de uma comunidade para doação de roupas. Participant
 - Curtidas e comentários nas publicações.
 - Opção para seguir e deixar de seguir participantes.
 - Filtro do feed para ver todas as publicações ou somente as pessoas seguidas.
+- Conversas privadas persistentes entre participantes, acessíveis pelo feed ou pela área **Mensagens**.
 - Gerenciamento e exclusão das próprias doações.
 - Persistência local no arquivo `data.json`.
 
@@ -49,18 +50,19 @@ PORT=3001 npm start
 1. Abra a aplicação e crie uma conta na opção **Cadastre-se**.
 2. No feed, use **Nova doação** para publicar uma peça.
 3. Use **Seguir** em uma publicação para acompanhar aquele participante. A aba **Seguindo** mostra as publicações de quem você segue.
-4. Curta ou comente as publicações. Para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
-5. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
+4. Use **Mensagem** em uma publicação ou abra **Mensagens** para iniciar uma conversa privada. As mensagens novas são verificadas periodicamente enquanto a área está aberta.
+5. Curta ou comente as publicações. Para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
+6. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
 
 ## Persistência dos dados
 
-O servidor lê e grava usuários, sessões, doações, curtidas, comentários e relações de quem cada participante segue em `data.json`. Esse arquivo é criado na pasta do projeto e seus dados permanecem após reiniciar o servidor.
+O servidor lê e grava usuários, sessões, doações, curtidas, comentários, relações de quem cada participante segue e mensagens privadas em `data.json`. Esse arquivo é criado na pasta do projeto e seus dados permanecem após reiniciar o servidor.
 
 Faça uma cópia de segurança de `data.json` antes de removê-lo ou substituí-lo. Apagar esse arquivo reinicializa os dados da aplicação. Como ele pode conter informações de contas e publicações, não compartilhe nem publique uma cópia preenchida com dados reais.
 
 ## API principal
 
-As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, curtida, comentário, seguir e exclusão exigem uma sessão, criada por cookie HTTP. Cadastro e login criam essa sessão.
+As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, curtida, comentário, seguir, mensagens e exclusão exigem uma sessão, criada por cookie HTTP. Cadastro e login criam essa sessão.
 
 | Método | Rota | Descrição |
 | --- | --- | --- |
@@ -75,6 +77,9 @@ As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, 
 | `POST` | `/api/donations/:id/like` | Alterna a curtida na doação. |
 | `POST` | `/api/donations/:id/comments` | Adiciona um comentário. |
 | `POST` | `/api/users/:id/follow` | Alterna entre seguir e deixar de seguir um participante. |
+| `GET` | `/api/conversations` | Lista os participantes e a prévia da última mensagem de cada conversa. |
+| `GET` | `/api/conversations/:id/messages` | Lista as mensagens trocadas com um participante. |
+| `POST` | `/api/conversations/:id/messages` | Envia uma mensagem de até 1000 caracteres. |
 
 As rotas `POST` que recebem dados usam JSON. Por exemplo, para cadastrar uma doação:
 
@@ -96,7 +101,7 @@ As rotas `POST` que recebem dados usam JSON. Por exemplo, para cadastrar uma doa
 ├── css/
 │   └── style.css   # estilos da interface
 ├── js/
-│   └── app.js      # navegação, feed e chamadas à API
+│   └── app.js      # navegação, feed, mensagens e chamadas à API
 ├── data.json       # persistência local
 ├── index.html      # páginas da aplicação
 ├── package.json    # comando de inicialização
