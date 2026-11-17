@@ -5,10 +5,12 @@ Aplicação demonstrativa de uma comunidade para doação de roupas. Participant
 ## Funcionalidades
 
 - Cadastro, login e logout de participantes.
-- Perfil de participação: doador, beneficiário ou ambos.
+- Perfil de participação: doador, beneficiário, ambos ou instituição/organizador.
 - Feed comunitário com doações e publicações independentes.
 - Publicações de texto, com foto opcional, para divulgar atividades e ações solidárias sem cadastrar uma roupa.
 - Cadastro de roupas com categoria, tamanho, condição, descrição e foto opcional.
+- Perfil **Instituição/Organizador**, com opção de associar uma data às publicações e divulgá-las no calendário mensal da comunidade.
+- Calendário mensal para consultar as atividades organizadas por data.
 - Painel pessoal com um resumo das doações da conta.
 - Curtidas e comentários nas publicações.
 - Opção para seguir e deixar de seguir participantes.
@@ -58,6 +60,7 @@ PORT=3001 npm start
 6. Acesse **Painel** pela navegação para ver o resumo da conta. Curta ou comente publicações e doações; para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
 7. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
 8. Clique no avatar fixo no canto inferior esquerdo para escolher ou alterar sua foto de perfil. São aceitas imagens PNG, JPG ou WebP de até 2 MB; sem foto, o avatar mostra as iniciais.
+9. Ao criar uma conta, escolha **Instituição/Organizador** para publicar atividades com data. Usuários autenticados podem consultar as atividades no **Calendário** e selecionar um dia para ver os detalhes.
 
 ## Persistência dos dados
 
@@ -77,6 +80,7 @@ As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, 
 | `POST` | `/api/auth/logout` | Encerra a sessão atual. |
 | `PUT` | `/api/auth/avatar` | Atualiza a foto de perfil da sessão atual. |
 | `GET` | `/api/users/:id/avatar` | Retorna a foto de perfil de um participante autenticado. |
+| `GET` | `/api/events?month=AAAA-MM` | Lista as atividades marcadas para o mês indicado. |
 | `GET` | `/api/feed` | Lista as doações e publicações da comunidade. |
 | `GET` | `/api/feed?filter=following` | Lista as publicações das pessoas seguidas pela conta atual. |
 | `POST` | `/api/donations` | Publica uma doação. |

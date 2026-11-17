@@ -28,6 +28,7 @@
           <div class="header-actions">
             <button class="header-link hidden" id="header-dashboard" type="button" data-view="dashboard">Painel</button>
             <button class="header-link hidden" id="header-feed" type="button" data-view="feed">Feed</button>
+            <button class="header-link hidden" id="header-calendar" type="button" data-view="calendar">Calendário</button>
             <button class="header-link hidden" id="header-donations" type="button" data-view="donations">Cadastrar</button>
             <button class="header-link hidden" id="header-messages" type="button" data-view="messages">Mensagens</button>
             <button class="header-link hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta">Sair</button>
@@ -130,6 +131,7 @@
               <option value="Doador">Quero doar roupas</option>
               <option value="Beneficiário">Preciso receber roupas</option>
               <option value="Ambos">Quero doar e também receber</option>
+              <option value="Instituição/Organizador">Represento uma instituição ou organizo atividades</option>
             </select>
             <label for="register-password" class="form-label mt-3"
               >Senha (mínimo de 6 caracteres)</label
@@ -242,6 +244,11 @@
               placeholder="Divulgue uma ação solidária, atividade ou novidade da comunidade..."
               required
             ></textarea>
+            <div id="post-event-date-field" class="hidden mt-3">
+              <label for="post-event-date" class="form-label">Data da atividade (opcional)</label>
+              <input id="post-event-date" class="form-control" type="date" />
+              <small class="form-text muted">A atividade aparecerá no calendário da comunidade.</small>
+            </div>
             <label for="post-image" class="form-label mt-3">Foto (opcional)</label>
             <input id="post-image" class="form-control" type="file" accept="image/png,image/jpeg,image/webp" />
             <div id="post-image-preview" class="image-preview hidden"></div>
@@ -257,6 +264,34 @@
         </div>
         <div id="stories" class="stories-row"></div>
         <div id="feed-list" class="feed-list"></div>
+      </section>
+
+      <!-- CALENDÁRIO -->
+      <section id="calendar-view" class="hidden">
+        <div class="calendar-heading">
+          <div>
+            <span class="eyebrow">AGENDA DA COMUNIDADE</span>
+            <h1>Calendário</h1>
+            <p class="muted">Consulte as atividades publicadas por instituições e organizadores.</p>
+          </div>
+          <div class="calendar-month-controls" aria-label="Navegar pelos meses">
+            <button class="calendar-month-button" type="button" data-calendar-month="-1" aria-label="Mês anterior">‹</button>
+            <strong id="calendar-month-label"></strong>
+            <button class="calendar-month-button" type="button" data-calendar-month="1" aria-label="Próximo mês">›</button>
+          </div>
+        </div>
+        <div class="calendar-layout">
+          <div class="calendar-panel">
+            <div class="calendar-grid calendar-weekdays" aria-hidden="true">
+              <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
+            </div>
+            <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="Dias do mês"></div>
+          </div>
+          <aside class="calendar-events-panel">
+            <h2 id="calendar-selected-label"></h2>
+            <div id="calendar-event-list"></div>
+          </aside>
+        </div>
       </section>
 
       <!-- MENSAGENS -->

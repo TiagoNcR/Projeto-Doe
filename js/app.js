@@ -1,8 +1,12 @@
-const views = ['login', 'register', 'dashboard', 'feed', 'messages', 'donations'];
+const views = ['login', 'register', 'dashboard', 'feed', 'calendar', 'messages', 'donations'];
+const organizerRole = 'Instituição/Organizador';
 const alertArea = document.getElementById('alert-area');
 let currentUserData = null;
 let feedItems = [];
 let feedFilter = 'all';
+let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let calendarEvents = [];
+let calendarSelectedDate = '';
 let conversationContacts = [];
 let activeConversationId = null;
 let messageRefreshTimer = null;
@@ -49,7 +53,7 @@ async function logoutUser() {
 
 function navigate(view) {
   if (!views.includes(view)) return;
-  if (['dashboard', 'feed', 'messages', 'donations'].includes(view) && !currentUserData) view = 'login';
+  if (['dashboard', 'feed', 'calendar', 'messages', 'donations'].includes(view) && !currentUserData) view = 'login';
   if (messageRefreshTimer) {
     clearInterval(messageRefreshTimer);
     messageRefreshTimer = null;
@@ -59,6 +63,7 @@ function navigate(view) {
   });
   document.getElementById('header-dashboard').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-feed').classList.toggle('hidden', !currentUserData);
+  document.getElementById('header-calendar').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-donations').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-messages').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-logout').classList.toggle('hidden', !currentUserData);
@@ -66,12 +71,13 @@ function navigate(view) {
   alertArea.innerHTML = '';
   if (view === 'dashboard') updateDashboard();
   if (view === 'feed') loadFeed();
+  if (view === 'calendar') loadCalendarMonth();
   if (view === 'messages') {
     loadConversations(activeConversationId);
     messageRefreshTimer = setInterval(refreshChat, 4000);
   }
   if (view === 'donations') loadMyDonations();
-  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'messages' ? 'Mensagens' : 'Doações'}`;
+  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : 'Doações'}`;
   history.replaceState(null, '', view === 'login' ? '/' : `#${view}`);
 }
 
@@ -132,6 +138,90 @@ function timeLabel(date) {
   return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(new Date(date));
 }
 
+function formatEventDate(date) {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(new Date(year, month - 1, day));
+}
+
+function calendarMonthKey() {
+  return `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function renderCalendar() {
+  const monthKey = calendarMonthKey();
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const firstDayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const todayKey = `${monthKey}-${String(today.getDate()).padStart(2, '0')}`;
+
+  if (!calendarSelectedDate.startsWith(`${monthKey}-`)) {
+    calendarSelectedDate = monthKey === currentMonthKey
+      ? todayKey
+      : calendarEvents[0]?.eventDate || `${monthKey}-01`;
+  }
+
+  document.getElementById('calendar-month-label').textContent = new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric'
+  }).format(calendarMonth);
+
+  const cellCount = Math.ceil((firstDayOffset + daysInMonth) / 7) * 7;
+  document.getElementById('calendar-grid').innerHTML = Array.from({ length: cellCount }, (_, index) => {
+    const day = index - firstDayOffset + 1;
+    if (day < 1 || day > daysInMonth) return '<span class="calendar-day-empty" aria-hidden="true"></span>';
+
+    const date = `${monthKey}-${String(day).padStart(2, '0')}`;
+    const count = calendarEvents.filter(item => item.eventDate === date).length;
+    const eventLabel = count ? `${count} ${count === 1 ? 'evento' : 'eventos'}` : '';
+    return `
+      <button class="calendar-day ${count ? 'has-events' : ''} ${date === calendarSelectedDate ? 'selected' : ''}"
+        type="button" role="gridcell" data-calendar-date="${date}"
+        aria-label="${escapeHTML(formatEventDate(date))}${count ? `, ${eventLabel}` : ''}"
+        aria-pressed="${date === calendarSelectedDate}">
+        <span class="calendar-day-number">${day}</span>
+        ${count ? `<span class="calendar-event-count">${eventLabel}</span>` : ''}
+      </button>
+    `;
+  }).join('');
+
+  document.getElementById('calendar-selected-label').textContent =
+    `Atividades em ${formatEventDate(calendarSelectedDate)}`;
+  const eventsForDay = calendarEvents.filter(item => item.eventDate === calendarSelectedDate);
+  document.getElementById('calendar-event-list').innerHTML = eventsForDay.length
+    ? eventsForDay.map(item => `
+        <article class="calendar-event-card">
+          <strong>${escapeHTML(item.ownerName)}</strong>
+          <p>${escapeHTML(item.text)}</p>
+        </article>
+      `).join('')
+    : '<p class="calendar-empty">Não há atividades nesta data.</p>';
+}
+
+async function loadCalendarMonth() {
+  const requestedMonth = calendarMonthKey();
+  calendarEvents = [];
+  renderCalendar();
+
+  try {
+    const data = await api(`/api/events?month=${requestedMonth}`);
+    if (requestedMonth !== calendarMonthKey()) return;
+    calendarEvents = data.events;
+    if (calendarEvents.length && !calendarEvents.some(item => item.eventDate === calendarSelectedDate)) {
+      calendarSelectedDate = calendarEvents[0].eventDate;
+    }
+    renderCalendar();
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  }
+}
+
 async function loadFeed() {
   try {
     const data = await api(`/api/feed?filter=${feedFilter}`);
@@ -164,6 +254,7 @@ async function loadFeed() {
            <p class="post-details">Tamanho ${escapeHTML(item.size)} · Condição: ${escapeHTML(item.condition)}</p>
            ${item.description ? `<p class="post-description">${escapeHTML(item.description)}</p>` : ''}`
         : `<p class="post-caption"><strong>${escapeHTML(item.ownerName)}</strong></p>
+           ${item.eventDate ? `<p class="post-event-date"><strong>Atividade:</strong> ${escapeHTML(formatEventDate(item.eventDate))}</p>` : ''}
            <p class="post-text">${escapeHTML(item.text)}</p>`;
       return `
       <article class="social-post ${isDonation ? 'donation-post' : 'community-post'}">
@@ -329,6 +420,10 @@ document.addEventListener('click', async event => {
   }
 
   if (event.target.closest('#show-post-form')) {
+    document.getElementById('post-event-date-field').classList.toggle(
+      'hidden',
+      currentUserData?.type !== organizerRole
+    );
     document.getElementById('post-form').classList.remove('hidden');
     document.getElementById('post-content').focus();
   }
@@ -392,6 +487,23 @@ document.addEventListener('click', async event => {
     feedFilter = filterButton.dataset.feedFilter;
     await loadFeed();
   }
+
+  const calendarMonthButton = event.target.closest('[data-calendar-month]');
+  if (calendarMonthButton) {
+    calendarMonth = new Date(
+      calendarMonth.getFullYear(),
+      calendarMonth.getMonth() + Number(calendarMonthButton.dataset.calendarMonth),
+      1
+    );
+    calendarSelectedDate = '';
+    await loadCalendarMonth();
+  }
+
+  const calendarDayButton = event.target.closest('[data-calendar-date]');
+  if (calendarDayButton) {
+    calendarSelectedDate = calendarDayButton.dataset.calendarDate;
+    renderCalendar();
+  }
 });
 
 document.addEventListener('submit', async event => {
@@ -418,7 +530,10 @@ document.addEventListener('submit', async event => {
         method: 'POST',
         body: JSON.stringify({
           text: document.getElementById('post-content').value,
-          image: await readImage(file)
+          image: await readImage(file),
+          eventDate: currentUserData.type === organizerRole
+            ? document.getElementById('post-event-date').value
+            : ''
         })
       });
       resetPostComposer();

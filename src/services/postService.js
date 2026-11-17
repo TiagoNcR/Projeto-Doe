@@ -3,6 +3,14 @@ const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
 const { publicPost } = require('../utils/serializers');
 
+const organizerRole = 'Instituição/Organizador';
+
+function isValidEventDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 function listPosts(user, filter) {
   const database = getDatabase();
   let posts = database.posts.slice();
@@ -23,6 +31,13 @@ function createPost(user, body) {
   const text = String(body.text || '').trim();
   if (!text) throw new HttpError(400, 'Escreva o conteúdo da publicação.');
   if (text.length > 1000) throw new HttpError(400, 'A publicação deve ter até 1000 caracteres.');
+  const eventDate = String(body.eventDate || '').trim();
+  if (eventDate && user.type !== organizerRole) {
+    throw new HttpError(403, 'Somente instituições e organizadores podem marcar uma atividade.');
+  }
+  if (eventDate && !isValidEventDate(eventDate)) {
+    throw new HttpError(400, 'Informe uma data válida para a atividade.');
+  }
   if (body.image && (!String(body.image).startsWith('data:image/') || String(body.image).length > 5 * 1024 * 1024)) {
     throw new HttpError(400, 'Envie uma imagem válida com até 5 MB.');
   }
@@ -36,9 +51,21 @@ function createPost(user, body) {
     comments: [],
     createdAt: new Date().toISOString()
   };
+  if (eventDate) post.eventDate = eventDate;
   getDatabase().posts.push(post);
   saveDatabase();
   return publicPost(post);
+}
+
+function listEvents(month) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month || ''))) {
+    throw new HttpError(400, 'Informe o mês no formato AAAA-MM.');
+  }
+
+  return getDatabase().posts
+    .filter(item => typeof item.eventDate === 'string' && item.eventDate.startsWith(`${month}-`))
+    .sort((left, right) => left.eventDate.localeCompare(right.eventDate))
+    .map(item => ({ ...publicPost(item), kind: 'post' }));
 }
 
 function removePost(user, id) {
@@ -50,4 +77,4 @@ function removePost(user, id) {
   saveDatabase();
 }
 
-module.exports = { createPost, listPosts, removePost };
+module.exports = { createPost, listEvents, listPosts, removePost };
