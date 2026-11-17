@@ -98,15 +98,27 @@ As rotas `POST` que recebem dados usam JSON. Por exemplo, para cadastrar uma doa
 
 ```text
 .
+├── src/
+│   ├── controllers/       # entrada e resposta HTTP por funcionalidade
+│   ├── middleware/        # sessão e usuário autenticado
+│   ├── repositories/      # leitura e gravação do JSON
+│   ├── routes/            # mapeamento de método e rota para controllers
+│   ├── services/          # regras de autenticação, doações, social e mensagens
+│   ├── utils/             # HTTP, erros e serialização
+│   └── server.js          # servidor HTTP e arquivos públicos
 ├── css/
-│   └── style.css   # estilos da interface
+│   └── style.css          # estilos da interface
 ├── js/
-│   └── app.js      # navegação, feed, mensagens e chamadas à API
-├── data.json       # persistência local
-├── index.html      # páginas da aplicação
-├── package.json    # comando de inicialização
-└── server.js       # servidor HTTP e API
+│   └── app.js             # navegação, feed, mensagens e chamadas à API
+├── data.json              # persistência local
+├── index.html             # páginas da aplicação
+├── package.json           # comando de inicialização
+└── server.js              # inicialização da aplicação
 ```
+
+As requisições seguem o fluxo **rota → controller → service → repositório**. Para adicionar uma nova funcionalidade, crie suas regras no service e exponha as operações necessárias pelo controller e pelas rotas. A persistência atual usa JSON e pode ser substituída pelo repositório sem colocar acesso a arquivos nos controllers.
+
+Não há classes de entidade artificiais: os dados são objetos simples e as regras ficam nos services. Se entidades passarem a ter invariantes ou comportamentos próprios, elas podem ser introduzidas no domínio conforme a necessidade.
 
 ## Limitações
 

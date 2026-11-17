@@ -1,0 +1,56 @@
+const authController = require('../controllers/authController');
+const donationController = require('../controllers/donationController');
+const messageController = require('../controllers/messageController');
+const socialController = require('../controllers/socialController');
+const { HttpError } = require('../utils/errors');
+const { sendJson } = require('../utils/http');
+
+const routes = [
+  { method: 'GET', pattern: /^\/api\/me$/, handler: authController.me },
+  { method: 'POST', pattern: /^\/api\/auth\/register$/, handler: authController.register },
+  { method: 'POST', pattern: /^\/api\/auth\/login$/, handler: authController.login },
+  { method: 'POST', pattern: /^\/api\/auth\/logout$/, handler: authController.logout },
+  { method: 'GET', pattern: /^\/api\/feed$/, handler: donationController.feed },
+  { method: 'POST', pattern: /^\/api\/users\/([^/]+)\/follow$/, handler: socialController.toggleFollow },
+  { method: 'GET', pattern: /^\/api\/conversations$/, handler: messageController.conversations },
+  {
+    method: 'GET',
+    pattern: /^\/api\/conversations\/([^/]+)\/messages$/,
+    handler: messageController.messages
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/conversations\/([^/]+)\/messages$/,
+    handler: messageController.send
+  },
+  { method: 'POST', pattern: /^\/api\/donations$/, handler: donationController.create },
+  { method: 'POST', pattern: /^\/api\/donations\/([^/]+)\/like$/, handler: donationController.like },
+  {
+    method: 'POST',
+    pattern: /^\/api\/donations\/([^/]+)\/comments$/,
+    handler: donationController.comment
+  },
+  { method: 'DELETE', pattern: /^\/api\/donations\/([^/]+)$/, handler: donationController.remove }
+];
+
+async function handleApi(req, res, pathname) {
+  const route = routes.find(item => item.method === req.method && item.pattern.test(pathname));
+  if (!route) {
+    sendJson(res, 404, { error: 'Rota não encontrada.' });
+    return;
+  }
+
+  const params = pathname.match(route.pattern).slice(1);
+  try {
+    await route.handler(req, res, ...params);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      sendJson(res, error.status, { error: error.message });
+      return;
+    }
+    console.error(error);
+    sendJson(res, 500, { error: 'Erro interno do servidor.' });
+  }
+}
+
+module.exports = { handleApi };
