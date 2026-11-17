@@ -2,6 +2,7 @@ const views = ['login', 'register', 'dashboard', 'feed', 'donations'];
 const alertArea = document.getElementById('alert-area');
 let currentUserData = null;
 let feedDonations = [];
+let feedFilter = 'all';
 
 function escapeHTML(value = '') {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -78,8 +79,11 @@ function timeLabel(date) {
 
 async function loadFeed() {
   try {
-    const data = await api('/api/feed');
+    const data = await api(`/api/feed?filter=${feedFilter}`);
     feedDonations = data.donations;
+    document.querySelectorAll('[data-feed-filter]').forEach(button => {
+      button.classList.toggle('active', button.dataset.feedFilter === feedFilter);
+    });
     const uniqueOwners = [...new Map(feedDonations.map(item => [item.ownerId, item])).values()].slice(0, 10);
     document.getElementById('stories').innerHTML = uniqueOwners.length
       ? uniqueOwners.map(item => `
@@ -92,7 +96,9 @@ async function loadFeed() {
 
     const list = document.getElementById('feed-list');
     if (!feedDonations.length) {
-      list.innerHTML = '<div class="empty-state">Ainda não há doações na comunidade.</div>';
+      list.innerHTML = feedFilter === 'following'
+        ? '<div class="empty-state">As pessoas que você segue ainda não publicaram doações.<br>Volte para “Todas” e siga um participante para acompanhar as publicações.</div>'
+        : '<div class="empty-state">Ainda não há doações na comunidade.</div>';
       return;
     }
     list.innerHTML = feedDonations.map(item => `
@@ -102,7 +108,12 @@ async function loadFeed() {
             <div class="post-avatar">${escapeHTML(initials(item.ownerName))}</div>
             <div><strong>${escapeHTML(item.ownerName)}</strong><small>${escapeHTML(item.category)} · ${escapeHTML(item.size)}</small></div>
           </div>
-          <small>${escapeHTML(timeLabel(item.createdAt))}</small>
+          <div class="post-header-actions">
+            ${item.ownerId !== currentUserData.id
+              ? `<button class="follow-button ${item.followingOwner ? 'following' : ''}" type="button" data-follow="${escapeHTML(item.ownerId)}">${item.followingOwner ? 'Seguindo' : 'Seguir'}</button>`
+              : '<span class="my-post-label">Sua publicação</span>'}
+            <small>${escapeHTML(timeLabel(item.createdAt))}</small>
+          </div>
         </header>
         ${item.image
           ? `<img class="post-image" src="${escapeHTML(item.image)}" alt="${escapeHTML(item.name)}">`
@@ -185,6 +196,25 @@ document.addEventListener('click', async event => {
     } catch (error) {
       showAlert(error.message, 'danger');
     }
+  }
+
+  const followButton = event.target.closest('[data-follow]');
+  if (followButton) {
+    try {
+      const { following } = await api(`/api/users/${followButton.dataset.follow}/follow`, { method: 'POST' });
+      await loadFeed();
+      showAlert(following
+        ? 'Agora você está seguindo este participante.'
+        : 'Você deixou de seguir este participante.');
+    } catch (error) {
+      showAlert(error.message, 'danger');
+    }
+  }
+
+  const filterButton = event.target.closest('[data-feed-filter]');
+  if (filterButton) {
+    feedFilter = filterButton.dataset.feedFilter;
+    await loadFeed();
   }
 });
 

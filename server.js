@@ -200,11 +200,48 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'GET' && url === '/api/feed') {
     const user = currentUser(req);
-    const donations = db.donations.slice().reverse().map(item => ({
+    const filter = new URL(req.url, 'http://localhost').searchParams.get('filter');
+    let items = db.donations.slice().reverse();
+    if (filter === 'following' && user) {
+      const following = Array.isArray(user.following) ? user.following : [];
+      items = items.filter(item => following.includes(item.ownerId));
+    }
+    const donations = items.map(item => ({
       ...publicDonation(item),
-      likedByMe: Boolean(user && item.likes.includes(user.id))
+      likedByMe: Boolean(user && item.likes.includes(user.id)),
+      followingOwner: Boolean(user && Array.isArray(user.following) && user.following.includes(item.ownerId))
     }));
-    sendJson(res, 200, { donations });
+    const following = user && Array.isArray(user.following) ? user.following : [];
+    sendJson(res, 200, { donations, followingCount: following.length });
+    return;
+  }
+
+  const followMatch = url.match(/^\/api\/users\/([^/]+)\/follow$/);
+  if (followMatch && req.method === 'POST') {
+    const user = currentUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: 'Faça login para seguir participantes.' });
+      return;
+    }
+    const target = db.users.find(item => item.id === followMatch[1]);
+    if (!target) {
+      sendJson(res, 404, { error: 'Participante não encontrado.' });
+      return;
+    }
+    if (target.id === user.id) {
+      sendJson(res, 400, { error: 'Você não pode seguir a si mesmo.' });
+      return;
+    }
+    if (!Array.isArray(user.following)) user.following = [];
+    if (user.following.includes(target.id)) {
+      user.following = user.following.filter(id => id !== target.id);
+    } else {
+      user.following.push(target.id);
+    }
+    writeDb();
+    sendJson(res, 200, {
+      following: user.following.includes(target.id)
+    });
     return;
   }
 
