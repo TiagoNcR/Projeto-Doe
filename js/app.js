@@ -33,6 +33,17 @@ function showAlert(message, type = 'success') {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+async function logoutUser() {
+  try {
+    await api('/api/auth/logout', { method: 'POST' });
+    currentUserData = null;
+    navigate('login');
+    showAlert('Você saiu da sua conta.');
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  }
+}
+
 function navigate(view) {
   if (!views.includes(view)) return;
   if (['dashboard', 'feed', 'donations'].includes(view) && !currentUserData) view = 'login';
@@ -41,6 +52,7 @@ function navigate(view) {
   });
   document.getElementById('header-feed').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-donations').classList.toggle('hidden', !currentUserData);
+  document.getElementById('header-logout').classList.toggle('hidden', !currentUserData);
   alertArea.innerHTML = '';
   if (view === 'dashboard') updateDashboard();
   if (view === 'feed') loadFeed();
@@ -170,6 +182,11 @@ async function loadMyDonations() {
 }
 
 document.addEventListener('click', async event => {
+  const logoutButton = event.target.closest('[data-logout]');
+  if (logoutButton) {
+    await logoutUser();
+  }
+
   const viewButton = event.target.closest('[data-view]');
   if (viewButton) {
     event.preventEvent?.();
@@ -328,16 +345,6 @@ document.getElementById('donation-form').addEventListener('submit', async event 
   } catch (error) {
     showAlert(error.message, 'danger');
   }
-});
-
-document.getElementById('logout-button').addEventListener('click', async () => {
-  try {
-    await api('/api/auth/logout', { method: 'POST' });
-  } catch (error) {
-    showAlert(error.message, 'danger');
-  }
-  currentUserData = null;
-  navigate('login');
 });
 
 async function initialize() {

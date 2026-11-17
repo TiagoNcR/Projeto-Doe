@@ -49,7 +49,7 @@ PORT=3001 npm start
 1. Abra a aplicação e crie uma conta na opção **Cadastre-se**.
 2. No feed, use **Nova doação** para publicar uma peça.
 3. Use **Seguir** em uma publicação para acompanhar aquele participante. A aba **Seguindo** mostra as publicações de quem você segue.
-4. Curta ou comente as publicações. Para gerenciar suas peças, acesse **Cadastrar**.
+4. Curta ou comente as publicações. Para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
 5. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
 
 ## Persistência dos dados
