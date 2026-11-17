@@ -10,6 +10,8 @@ let calendarSelectedDate = '';
 let conversationContacts = [];
 let activeConversationId = null;
 let messageRefreshTimer = null;
+let notificationRefreshTimer = null;
+let notificationRefreshInProgress = false;
 
 function escapeHTML(value = '') {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -58,6 +60,10 @@ function navigate(view) {
     clearInterval(messageRefreshTimer);
     messageRefreshTimer = null;
   }
+  if (notificationRefreshTimer) {
+    clearInterval(notificationRefreshTimer);
+    notificationRefreshTimer = null;
+  }
   views.forEach(name => {
     document.getElementById(`${name}-view`).classList.toggle('hidden', name !== view);
   });
@@ -68,6 +74,12 @@ function navigate(view) {
   document.getElementById('header-messages').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-logout').classList.toggle('hidden', !currentUserData);
   renderProfileAvatar();
+  if (currentUserData) {
+    if (view !== 'messages') refreshNotifications();
+    notificationRefreshTimer = setInterval(refreshNotifications, 10000);
+  } else {
+    renderNotificationCount(0);
+  }
   alertArea.innerHTML = '';
   if (view === 'dashboard') updateDashboard();
   if (view === 'feed') loadFeed();
@@ -109,11 +121,13 @@ function avatarMarkup(name, avatarUrl, className) {
 
 function renderProfileAvatar() {
   const button = document.getElementById('profile-avatar-button');
+  const notificationBell = document.getElementById('notification-bell');
   const initialsElement = document.getElementById('profile-avatar-initials');
   const image = document.getElementById('profile-avatar-image');
   const isLoggedIn = Boolean(currentUserData);
 
   button.classList.toggle('hidden', !isLoggedIn);
+  notificationBell.classList.toggle('hidden', !isLoggedIn);
   if (!isLoggedIn) {
     image.removeAttribute('src');
     return;
@@ -127,6 +141,51 @@ function renderProfileAvatar() {
   else image.removeAttribute('src');
   button.title = `Alterar foto de ${currentUserData.name}`;
   button.setAttribute('aria-label', `Alterar foto de perfil de ${currentUserData.name}`);
+}
+
+function renderNotificationCount(count) {
+  const bell = document.getElementById('notification-bell');
+  const badge = document.getElementById('notification-badge');
+  const unreadCount = Math.max(0, Math.trunc(Number(count) || 0));
+  const label = unreadCount
+    ? `${unreadCount} ${unreadCount === 1 ? 'mensagem não lida' : 'mensagens não lidas'}. Abrir mensagens`
+    : 'Abrir mensagens';
+
+  badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+  badge.classList.toggle('hidden', unreadCount === 0);
+  bell.classList.toggle('has-unread', unreadCount > 0);
+  bell.setAttribute('aria-label', label);
+  bell.title = label;
+}
+
+function renderConversationNotificationCount(conversations) {
+  const unreadCount = conversations.reduce(
+    (total, conversation) => total + (Number(conversation.unreadCount) || 0),
+    0
+  );
+  renderNotificationCount(unreadCount);
+}
+
+async function refreshNotifications() {
+  if (!currentUserData || notificationRefreshInProgress) return;
+  const userId = currentUserData.id;
+  notificationRefreshInProgress = true;
+  try {
+    const data = await api('/api/conversations');
+    if (currentUserData?.id !== userId) return;
+    renderConversationNotificationCount(data.conversations);
+    if (!document.getElementById('messages-view').classList.contains('hidden')) {
+      conversationContacts = data.conversations;
+      renderConversationList();
+    }
+  } catch (error) {
+    const bell = document.getElementById('notification-bell');
+    bell.setAttribute('aria-label', 'Não foi possível verificar mensagens não lidas');
+    bell.title = 'Não foi possível verificar mensagens não lidas';
+    console.error('Não foi possível atualizar as notificações de mensagens.', error);
+  } finally {
+    notificationRefreshInProgress = false;
+  }
 }
 
 function timeLabel(date) {
@@ -344,6 +403,7 @@ function renderConversationList() {
           <strong>${escapeHTML(contact.name)}</strong>
           <small>${escapeHTML(preview)}</small>
         </span>
+        ${contact.unreadCount ? `<span class="conversation-unread-badge" aria-label="${contact.unreadCount} mensagens não lidas">${contact.unreadCount > 99 ? '99+' : contact.unreadCount}</span>` : ''}
         ${contact.lastMessageAt ? `<time>${escapeHTML(timeLabel(contact.lastMessageAt))}</time>` : ''}
       </button>
     `;
@@ -356,6 +416,12 @@ async function loadConversationMessages(contactId) {
   try {
     const data = await api(`/api/conversations/${contactId}/messages`);
     if (contactId !== activeConversationId) return;
+    const contact = conversationContacts.find(item => item.id === contactId);
+    if (contact) {
+      contact.unreadCount = Number(data.unreadCount) || 0;
+      renderConversationList();
+      renderConversationNotificationCount(conversationContacts);
+    }
     const history = document.getElementById('chat-history');
     const isNewConversation = history.dataset.conversationId !== contactId;
     const wasNearBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 80;
@@ -378,7 +444,12 @@ async function loadConversations(selectedId = activeConversationId) {
   try {
     const data = await api('/api/conversations');
     conversationContacts = data.conversations;
-    activeConversationId = conversationContacts.some(contact => contact.id === selectedId) ? selectedId : null;
+    renderConversationNotificationCount(conversationContacts);
+    activeConversationId = conversationContacts.some(contact => contact.id === selectedId)
+      ? selectedId
+      : selectedId
+        ? null
+        : conversationContacts.find(contact => contact.unreadCount > 0)?.id || null;
     renderConversationList();
 
     const contact = conversationContacts.find(item => item.id === activeConversationId);
@@ -408,6 +479,8 @@ function resetPostComposer() {
 }
 
 document.addEventListener('click', async event => {
+  if (event.target.closest('#notification-bell')) activeConversationId = null;
+
   const logoutButton = event.target.closest('[data-logout]');
   if (logoutButton) {
     await logoutUser();

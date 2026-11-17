@@ -14,6 +14,14 @@ function isConversationMessage(message, firstUserId, secondUserId) {
     (message.senderId === secondUserId && message.recipientId === firstUserId);
 }
 
+function unreadMessageCount(messages, userId) {
+  return messages.filter(message =>
+    message.recipientId === userId &&
+    Array.isArray(message.readBy) &&
+    !message.readBy.includes(userId)
+  ).length;
+}
+
 function listConversations(user) {
   const database = getDatabase();
   const conversations = database.users
@@ -30,7 +38,8 @@ function listConversations(user) {
         avatarUrl: avatarUrl(contact),
         lastMessage: latest ? latest.text : '',
         lastMessageAt: latest ? latest.createdAt : '',
-        lastMessageFromMe: Boolean(latest && latest.senderId === user.id)
+        lastMessageFromMe: Boolean(latest && latest.senderId === user.id),
+        unreadCount: unreadMessageCount(messages, user.id)
       };
     })
     .sort((left, right) =>
@@ -45,13 +54,28 @@ function listMessages(user, contactId) {
   if (contact.id === user.id) throw new HttpError(400, 'Não é possível abrir uma conversa consigo mesmo.');
 
   const database = getDatabase();
-  const messages = database.messages
-    .filter(message => isConversationMessage(message, user.id, contact.id))
+  const conversationMessages = database.messages
+    .filter(message => isConversationMessage(message, user.id, contact.id));
+  let hasUnreadMessages = false;
+  for (const message of conversationMessages) {
+    if (message.recipientId !== user.id) continue;
+    const readBy = Array.isArray(message.readBy) ? message.readBy : [message.senderId];
+    if (!readBy.includes(user.id)) {
+      message.readBy = [...readBy, user.id];
+      hasUnreadMessages = true;
+    } else if (!Array.isArray(message.readBy)) {
+      message.readBy = readBy;
+      hasUnreadMessages = true;
+    }
+  }
+  if (hasUnreadMessages) saveDatabase();
+
+  const messages = conversationMessages
     .map(message => ({
       ...message,
       senderName: database.users.find(item => item.id === message.senderId)?.name || 'Participante'
     }));
-  return { messages };
+  return { messages, unreadCount: unreadMessageCount(conversationMessages, user.id) };
 }
 
 function sendMessage(user, contactId, body) {
@@ -67,7 +91,8 @@ function sendMessage(user, contactId, body) {
     senderId: user.id,
     recipientId: contact.id,
     text,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    readBy: [user.id]
   };
   getDatabase().messages.push(message);
   saveDatabase();

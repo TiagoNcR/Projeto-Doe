@@ -16,6 +16,7 @@ Aplicação demonstrativa de uma comunidade para doação de roupas. Participant
 - Opção para seguir e deixar de seguir participantes.
 - Filtro do feed para ver todas as publicações ou somente as pessoas seguidas.
 - Conversas privadas persistentes entre participantes, acessíveis pelo feed ou pela área **Mensagens**.
+- Sino de avisos acima do avatar, com a contagem de mensagens não lidas.
 - Foto de perfil atualizável pelo avatar fixo no canto inferior esquerdo, exibida no feed e nas conversas.
 - Gerenciamento e exclusão das próprias doações.
 - Persistência local no arquivo `data.json`.
@@ -56,7 +57,7 @@ PORT=3001 npm start
 2. No feed, use **Nova doação** para publicar uma peça.
 3. Use **Seguir** em uma publicação para acompanhar aquele participante. A aba **Seguindo** mostra as publicações de quem você segue.
 4. Use **Fazer publicação** no feed para compartilhar um texto e, se quiser, uma foto; não é necessário cadastrar uma roupa.
-5. Use **Mensagem** em uma publicação ou abra **Mensagens** para iniciar uma conversa privada. As mensagens novas são verificadas periodicamente enquanto a área está aberta.
+5. Use **Mensagem** em uma publicação ou abra **Mensagens** para iniciar uma conversa privada. O sino acima do avatar indica mensagens não lidas; abrir a conversa marca as mensagens recebidas como lidas.
 6. Acesse **Painel** pela navegação para ver o resumo da conta. Curta ou comente publicações e doações; para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
 7. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
 8. Clique no avatar fixo no canto inferior esquerdo para escolher ou alterar sua foto de perfil. São aceitas imagens PNG, JPG ou WebP de até 2 MB; sem foto, o avatar mostra as iniciais.
@@ -64,7 +65,7 @@ PORT=3001 npm start
 
 ## Persistência dos dados
 
-O servidor lê e grava usuários, sessões, doações, publicações, curtidas, comentários, relações de quem cada participante segue e mensagens privadas em `data.json`. Esse arquivo é criado na pasta do projeto e seus dados permanecem após reiniciar o servidor.
+O servidor lê e grava usuários, sessões, doações, publicações, curtidas, comentários, relações de quem cada participante segue e mensagens privadas com seu estado de leitura em `data.json`. Esse arquivo é criado na pasta do projeto e seus dados permanecem após reiniciar o servidor.
 
 Faça uma cópia de segurança de `data.json` antes de removê-lo ou substituí-lo. Apagar esse arquivo reinicializa os dados da aplicação. Como ele pode conter informações de contas e publicações, não compartilhe nem publique uma cópia preenchida com dados reais.
 
@@ -92,8 +93,8 @@ As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, 
 | `POST` | `/api/donations/:id/like` | Alterna a curtida em uma doação. |
 | `POST` | `/api/donations/:id/comments` | Adiciona comentário a uma doação. |
 | `POST` | `/api/users/:id/follow` | Alterna entre seguir e deixar de seguir um participante. |
-| `GET` | `/api/conversations` | Lista os participantes e a prévia da última mensagem de cada conversa. |
-| `GET` | `/api/conversations/:id/messages` | Lista as mensagens trocadas com um participante. |
+| `GET` | `/api/conversations` | Lista os participantes, a prévia da última mensagem e a contagem de mensagens não lidas. |
+| `GET` | `/api/conversations/:id/messages` | Lista as mensagens trocadas com um participante e marca as recebidas como lidas. |
 | `POST` | `/api/conversations/:id/messages` | Envia uma mensagem de até 1000 caracteres. |
 
 As rotas `POST` que recebem dados usam JSON. Por exemplo, para cadastrar uma doação:
