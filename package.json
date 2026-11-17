@@ -1,0 +1,9 @@
+{
+  "name": "projeto-doe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rede social demonstrativa para doação de roupas",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
