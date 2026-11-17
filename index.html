@@ -223,9 +223,32 @@
         <div class="feed-heading">
           <div>
             <span class="eyebrow">COMUNIDADE</span>
-            <h1>Doações da comunidade</h1>
+            <h1>Feed da comunidade</h1>
           </div>
-          <button class="btn btn-doe" type="button" data-view="donations">Nova doação</button>
+          <div class="feed-actions">
+            <button class="btn btn-outline-doe" type="button" data-view="donations">Nova doação</button>
+            <button id="show-post-form" class="btn btn-doe" type="button">Fazer publicação</button>
+          </div>
+        </div>
+        <div class="post-composer">
+          <form id="post-form" class="post-form hidden">
+            <label for="post-content" class="form-label">O que você quer compartilhar?</label>
+            <textarea
+              id="post-content"
+              class="form-control"
+              rows="4"
+              maxlength="1000"
+              placeholder="Divulgue uma ação solidária, atividade ou novidade da comunidade..."
+              required
+            ></textarea>
+            <label for="post-image" class="form-label mt-3">Foto (opcional)</label>
+            <input id="post-image" class="form-control" type="file" accept="image/png,image/jpeg,image/webp" />
+            <div id="post-image-preview" class="image-preview hidden"></div>
+            <div class="post-form-actions">
+              <button id="cancel-post" class="btn btn-outline-doe" type="button">Cancelar</button>
+              <button class="btn btn-doe" type="submit">Publicar</button>
+            </div>
+          </form>
         </div>
         <div class="feed-filters" role="group" aria-label="Filtrar publicações">
           <button class="feed-filter active" type="button" data-feed-filter="all">Todas</button>

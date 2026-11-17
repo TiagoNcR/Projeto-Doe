@@ -6,7 +6,8 @@ Aplicação demonstrativa de uma comunidade para doação de roupas. Participant
 
 - Cadastro, login e logout de participantes.
 - Perfil de participação: doador, beneficiário ou ambos.
-- Feed comunitário com publicações de doações.
+- Feed comunitário com doações e publicações independentes.
+- Publicações de texto, com foto opcional, para divulgar atividades e ações solidárias sem cadastrar uma roupa.
 - Cadastro de roupas com categoria, tamanho, condição, descrição e foto opcional.
 - Curtidas e comentários nas publicações.
 - Opção para seguir e deixar de seguir participantes.
@@ -50,13 +51,14 @@ PORT=3001 npm start
 1. Abra a aplicação e crie uma conta na opção **Cadastre-se**.
 2. No feed, use **Nova doação** para publicar uma peça.
 3. Use **Seguir** em uma publicação para acompanhar aquele participante. A aba **Seguindo** mostra as publicações de quem você segue.
-4. Use **Mensagem** em uma publicação ou abra **Mensagens** para iniciar uma conversa privada. As mensagens novas são verificadas periodicamente enquanto a área está aberta.
-5. Curta ou comente as publicações. Para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
-6. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
+4. Use **Fazer publicação** no feed para compartilhar um texto e, se quiser, uma foto; não é necessário cadastrar uma roupa.
+5. Use **Mensagem** em uma publicação ou abra **Mensagens** para iniciar uma conversa privada. As mensagens novas são verificadas periodicamente enquanto a área está aberta.
+6. Curta ou comente publicações e doações. Para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
+7. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
 
 ## Persistência dos dados
 
-O servidor lê e grava usuários, sessões, doações, curtidas, comentários, relações de quem cada participante segue e mensagens privadas em `data.json`. Esse arquivo é criado na pasta do projeto e seus dados permanecem após reiniciar o servidor.
+O servidor lê e grava usuários, sessões, doações, publicações, curtidas, comentários, relações de quem cada participante segue e mensagens privadas em `data.json`. Esse arquivo é criado na pasta do projeto e seus dados permanecem após reiniciar o servidor.
 
 Faça uma cópia de segurança de `data.json` antes de removê-lo ou substituí-lo. Apagar esse arquivo reinicializa os dados da aplicação. Como ele pode conter informações de contas e publicações, não compartilhe nem publique uma cópia preenchida com dados reais.
 
@@ -70,12 +72,16 @@ As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, 
 | `POST` | `/api/auth/register` | Cria uma conta e inicia uma sessão. |
 | `POST` | `/api/auth/login` | Inicia uma sessão. |
 | `POST` | `/api/auth/logout` | Encerra a sessão atual. |
-| `GET` | `/api/feed` | Lista as doações da comunidade. |
-| `GET` | `/api/feed?filter=following` | Lista doações das pessoas seguidas pela conta atual. |
+| `GET` | `/api/feed` | Lista as doações e publicações da comunidade. |
+| `GET` | `/api/feed?filter=following` | Lista as publicações das pessoas seguidas pela conta atual. |
 | `POST` | `/api/donations` | Publica uma doação. |
 | `DELETE` | `/api/donations/:id` | Exclui uma doação própria. |
-| `POST` | `/api/donations/:id/like` | Alterna a curtida na doação. |
-| `POST` | `/api/donations/:id/comments` | Adiciona um comentário. |
+| `POST` | `/api/posts` | Cria uma publicação de texto com foto opcional. |
+| `DELETE` | `/api/posts/:id` | Exclui uma publicação própria. |
+| `POST` | `/api/posts/:id/like` | Alterna a curtida em uma publicação. |
+| `POST` | `/api/posts/:id/comments` | Adiciona comentário a uma publicação. |
+| `POST` | `/api/donations/:id/like` | Alterna a curtida em uma doação. |
+| `POST` | `/api/donations/:id/comments` | Adiciona comentário a uma doação. |
 | `POST` | `/api/users/:id/follow` | Alterna entre seguir e deixar de seguir um participante. |
 | `GET` | `/api/conversations` | Lista os participantes e a prévia da última mensagem de cada conversa. |
 | `GET` | `/api/conversations/:id/messages` | Lista as mensagens trocadas com um participante. |
@@ -103,7 +109,7 @@ As rotas `POST` que recebem dados usam JSON. Por exemplo, para cadastrar uma doa
 │   ├── middleware/        # sessão e usuário autenticado
 │   ├── repositories/      # leitura e gravação do JSON
 │   ├── routes/            # mapeamento de método e rota para controllers
-│   ├── services/          # regras de autenticação, doações, social e mensagens
+│   ├── services/          # autenticação, feed, doações, publicações e mensagens
 │   ├── utils/             # HTTP, erros e serialização
 │   └── server.js          # servidor HTTP e arquivos públicos
 ├── css/

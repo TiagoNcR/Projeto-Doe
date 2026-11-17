@@ -13,6 +13,7 @@ function listDonations(user, filter) {
 
   const donations = items.map(item => ({
     ...publicDonation(item),
+    kind: 'donation',
     likedByMe: Boolean(user && item.likes.includes(user.id)),
     followingOwner: Boolean(user && Array.isArray(user.following) && user.following.includes(item.ownerId))
   }));

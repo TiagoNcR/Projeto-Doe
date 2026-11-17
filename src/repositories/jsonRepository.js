@@ -4,7 +4,7 @@ const path = require('path');
 const databaseFile = path.join(__dirname, '..', '..', 'data.json');
 
 function defaultDatabase() {
-  return { users: [], donations: [], sessions: [], messages: [] };
+  return { users: [], donations: [], posts: [], sessions: [], messages: [] };
 }
 
 function loadDatabase() {
@@ -16,6 +16,7 @@ function loadDatabase() {
 }
 
 const database = loadDatabase();
+if (!Array.isArray(database.posts)) database.posts = [];
 if (!Array.isArray(database.messages)) database.messages = [];
 
 function getDatabase() {

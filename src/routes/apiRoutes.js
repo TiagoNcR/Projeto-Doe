@@ -1,6 +1,7 @@
 const authController = require('../controllers/authController');
 const donationController = require('../controllers/donationController');
 const messageController = require('../controllers/messageController');
+const postController = require('../controllers/postController');
 const socialController = require('../controllers/socialController');
 const { HttpError } = require('../utils/errors');
 const { sendJson } = require('../utils/http');
@@ -23,6 +24,10 @@ const routes = [
     pattern: /^\/api\/conversations\/([^/]+)\/messages$/,
     handler: messageController.send
   },
+  { method: 'POST', pattern: /^\/api\/posts$/, handler: postController.create },
+  { method: 'POST', pattern: /^\/api\/posts\/([^/]+)\/like$/, handler: postController.like },
+  { method: 'POST', pattern: /^\/api\/posts\/([^/]+)\/comments$/, handler: postController.comment },
+  { method: 'DELETE', pattern: /^\/api\/posts\/([^/]+)$/, handler: postController.remove },
   { method: 'POST', pattern: /^\/api\/donations$/, handler: donationController.create },
   { method: 'POST', pattern: /^\/api\/donations\/([^/]+)\/like$/, handler: donationController.like },
   {

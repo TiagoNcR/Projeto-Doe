@@ -14,4 +14,14 @@ function publicDonation(item) {
   };
 }
 
-module.exports = { safeUser, publicDonation };
+function publicPost(item) {
+  const owner = getDatabase().users.find(user => user.id === item.ownerId);
+  return {
+    ...item,
+    ownerName: owner ? owner.name : 'Participante',
+    ownerType: owner ? owner.type : 'Doador',
+    likedByMe: false
+  };
+}
+
+module.exports = { publicDonation, publicPost, safeUser };

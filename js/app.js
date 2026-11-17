@@ -1,7 +1,7 @@
 const views = ['login', 'register', 'dashboard', 'feed', 'messages', 'donations'];
 const alertArea = document.getElementById('alert-area');
 let currentUserData = null;
-let feedDonations = [];
+let feedItems = [];
 let feedFilter = 'all';
 let conversationContacts = [];
 let activeConversationId = null;
@@ -79,7 +79,7 @@ async function updateDashboard() {
   document.getElementById('stat-profile').textContent = currentUserData.type;
   try {
     const data = await api('/api/feed');
-    const mine = data.donations.filter(item => item.ownerId === currentUserData.id);
+    const mine = data.items.filter(item => item.kind === 'donation' && item.ownerId === currentUserData.id);
     document.getElementById('stat-total').textContent = mine.length;
     document.getElementById('stat-available').textContent = mine.length;
   } catch {
@@ -104,11 +104,11 @@ function timeLabel(date) {
 async function loadFeed() {
   try {
     const data = await api(`/api/feed?filter=${feedFilter}`);
-    feedDonations = data.donations;
+    feedItems = data.items;
     document.querySelectorAll('[data-feed-filter]').forEach(button => {
       button.classList.toggle('active', button.dataset.feedFilter === feedFilter);
     });
-    const uniqueOwners = [...new Map(feedDonations.map(item => [item.ownerId, item])).values()].slice(0, 10);
+    const uniqueOwners = [...new Map(feedItems.map(item => [item.ownerId, item])).values()].slice(0, 10);
     document.getElementById('stories').innerHTML = uniqueOwners.length
       ? uniqueOwners.map(item => `
           <article class="story">
@@ -116,21 +116,30 @@ async function loadFeed() {
             <span>${escapeHTML(item.ownerName.split(' ')[0])}</span>
           </article>
         `).join('')
-      : '<p class="muted mb-0">Seja o primeiro a publicar uma doação.</p>';
+      : '<p class="muted mb-0">Seja o primeiro a compartilhar algo com a comunidade.</p>';
 
     const list = document.getElementById('feed-list');
-    if (!feedDonations.length) {
+    if (!feedItems.length) {
       list.innerHTML = feedFilter === 'following'
-        ? '<div class="empty-state">As pessoas que você segue ainda não publicaram doações.<br>Volte para “Todas” e siga um participante para acompanhar as publicações.</div>'
-        : '<div class="empty-state">Ainda não há doações na comunidade.</div>';
+        ? '<div class="empty-state">As pessoas que você segue ainda não publicaram.<br>Volte para “Todas” e siga um participante para acompanhar as publicações.</div>'
+        : '<div class="empty-state">Ainda não há publicações na comunidade.</div>';
       return;
     }
-    list.innerHTML = feedDonations.map(item => `
-      <article class="social-post">
+    list.innerHTML = feedItems.map(item => {
+      const isDonation = item.kind === 'donation';
+      const collection = isDonation ? 'donations' : 'posts';
+      const publicationText = isDonation
+        ? `<p class="post-caption"><strong>${escapeHTML(item.ownerName)}</strong> está doando ${escapeHTML(item.name)}.</p>
+           <p class="post-details">Tamanho ${escapeHTML(item.size)} · Condição: ${escapeHTML(item.condition)}</p>
+           ${item.description ? `<p class="post-description">${escapeHTML(item.description)}</p>` : ''}`
+        : `<p class="post-caption"><strong>${escapeHTML(item.ownerName)}</strong></p>
+           <p class="post-text">${escapeHTML(item.text)}</p>`;
+      return `
+      <article class="social-post ${isDonation ? 'donation-post' : 'community-post'}">
         <header class="post-header">
           <div class="post-author">
             <div class="post-avatar">${escapeHTML(initials(item.ownerName))}</div>
-            <div><strong>${escapeHTML(item.ownerName)}</strong><small>${escapeHTML(item.category)} · ${escapeHTML(item.size)}</small></div>
+            <div><strong>${escapeHTML(item.ownerName)}</strong><small>${isDonation ? `${escapeHTML(item.category)} · ${escapeHTML(item.size)}` : 'Publicação da comunidade'}</small></div>
           </div>
           <div class="post-header-actions">
             ${item.ownerId !== currentUserData.id
@@ -140,28 +149,30 @@ async function loadFeed() {
           </div>
         </header>
         ${item.image
-          ? `<img class="post-image" src="${escapeHTML(item.image)}" alt="${escapeHTML(item.name)}">`
-          : `<div class="post-placeholder"><span>👕</span><strong>${escapeHTML(item.name)}</strong></div>`}
+          ? `<img class="post-image" src="${escapeHTML(item.image)}" alt="${escapeHTML(isDonation ? item.name : `Publicação de ${item.ownerName}`)}">`
+          : isDonation ? `<div class="post-placeholder"><span>👕</span><strong>${escapeHTML(item.name)}</strong></div>` : ''}
         <div class="post-body">
           <div class="post-actions">
-            <button class="like-button ${item.likedByMe ? 'liked' : ''}" type="button" data-like="${item.id}" aria-label="Curtir">
+            <button class="like-button ${item.likedByMe ? 'liked' : ''}" type="button" data-like="${item.id}" data-kind="${item.kind}" aria-label="Curtir">
               ${item.likedByMe ? '♥' : '♡'} <span>${item.likes.length}</span>
             </button>
             <span class="comment-count">💬 ${item.comments.length}</span>
           </div>
-          <p class="post-caption"><strong>${escapeHTML(item.ownerName)}</strong> está doando ${escapeHTML(item.name)}.</p>
-          <p class="post-details">Tamanho ${escapeHTML(item.size)} · Condição: ${escapeHTML(item.condition)}</p>
-          ${item.description ? `<p class="post-description">${escapeHTML(item.description)}</p>` : ''}
+          ${publicationText}
           <div class="comments">
             ${item.comments.slice(-3).map(comment => `<p><strong>${escapeHTML(comment.name)}</strong> ${escapeHTML(comment.text)}</p>`).join('')}
           </div>
-          <form class="comment-form" data-comment="${item.id}">
+          <form class="comment-form" data-comment="${item.id}" data-kind="${item.kind}">
             <input type="text" maxlength="180" placeholder="Adicionar um comentário..." aria-label="Comentário">
             <button type="submit">Enviar</button>
           </form>
+          ${!isDonation && item.ownerId === currentUserData.id
+            ? `<button class="delete-button mt-2" type="button" data-delete="${item.id}" data-kind="${collection}">Excluir publicação</button>`
+            : ''}
         </div>
       </article>
-    `).join('');
+    `;
+    }).join('');
   } catch (error) {
     showAlert(error.message, 'danger');
   }
@@ -171,7 +182,7 @@ async function loadMyDonations() {
   const list = document.getElementById('donation-list');
   try {
     const data = await api('/api/feed');
-    const mine = data.donations.filter(item => item.ownerId === currentUserData.id);
+    const mine = data.items.filter(item => item.kind === 'donation' && item.ownerId === currentUserData.id);
     if (!mine.length) {
       list.innerHTML = '<div class="empty-state">Você ainda não cadastrou uma doação.</div>';
       return;
@@ -185,7 +196,7 @@ async function loadMyDonations() {
           ${item.description ? `<p>${escapeHTML(item.description)}</p>` : ''}
           <small>${item.likes.length} curtida(s) · ${item.comments.length} comentário(s)</small>
         </div>
-        <button class="delete-button" type="button" data-delete="${item.id}">Excluir</button>
+        <button class="delete-button" type="button" data-delete="${item.id}" data-kind="donations">Excluir</button>
       </article>
     `).join('');
   } catch (error) {
@@ -265,6 +276,15 @@ async function refreshChat() {
   await loadConversations(activeConversationId);
 }
 
+function resetPostComposer() {
+  const form = document.getElementById('post-form');
+  form.reset();
+  form.classList.add('hidden');
+  const preview = document.getElementById('post-image-preview');
+  preview.classList.add('hidden');
+  preview.innerHTML = '';
+}
+
 document.addEventListener('click', async event => {
   const logoutButton = event.target.closest('[data-logout]');
   if (logoutButton) {
@@ -276,6 +296,12 @@ document.addEventListener('click', async event => {
     event.preventEvent?.();
     navigate(viewButton.dataset.view);
   }
+
+  if (event.target.closest('#show-post-form')) {
+    document.getElementById('post-form').classList.remove('hidden');
+    document.getElementById('post-content').focus();
+  }
+  if (event.target.closest('#cancel-post')) resetPostComposer();
 
   const messageButton = event.target.closest('[data-message-user]');
   if (messageButton) {
@@ -291,10 +317,16 @@ document.addEventListener('click', async event => {
   const deleteButton = event.target.closest('[data-delete]');
   if (deleteButton) {
     try {
-      await api(`/api/donations/${deleteButton.dataset.delete}`, { method: 'DELETE' });
-      await loadMyDonations();
-      await updateDashboard();
-      showAlert('Doação excluída com sucesso.');
+      const collection = deleteButton.dataset.kind || 'donations';
+      await api(`/api/${collection}/${deleteButton.dataset.delete}`, { method: 'DELETE' });
+      if (collection === 'posts') {
+        await loadFeed();
+        showAlert('Publicação excluída com sucesso.');
+      } else {
+        await loadMyDonations();
+        await updateDashboard();
+        showAlert('Doação excluída com sucesso.');
+      }
     } catch (error) {
       showAlert(error.message, 'danger');
     }
@@ -303,7 +335,8 @@ document.addEventListener('click', async event => {
   const likeButton = event.target.closest('[data-like]');
   if (likeButton) {
     try {
-      await api(`/api/donations/${likeButton.dataset.like}/like`, { method: 'POST' });
+      const collection = likeButton.dataset.kind === 'post' ? 'posts' : 'donations';
+      await api(`/api/${collection}/${likeButton.dataset.like}/like`, { method: 'POST' });
       await loadFeed();
     } catch (error) {
       showAlert(error.message, 'danger');
@@ -335,11 +368,32 @@ document.addEventListener('submit', async event => {
     event.preventDefault();
     const input = event.target.querySelector('input');
     try {
-      await api(`/api/donations/${event.target.dataset.comment}/comments`, {
+      const collection = event.target.dataset.kind === 'post' ? 'posts' : 'donations';
+      await api(`/api/${collection}/${event.target.dataset.comment}/comments`, {
         method: 'POST',
         body: JSON.stringify({ text: input.value })
       });
       await loadFeed();
+    } catch (error) {
+      showAlert(error.message, 'danger');
+    }
+  }
+
+  if (event.target.matches('#post-form')) {
+    event.preventDefault();
+    const file = document.getElementById('post-image').files[0];
+    try {
+      await api('/api/posts', {
+        method: 'POST',
+        body: JSON.stringify({
+          text: document.getElementById('post-content').value,
+          image: await readImage(file)
+        })
+      });
+      resetPostComposer();
+      feedFilter = 'all';
+      await loadFeed();
+      showAlert('Publicação compartilhada com a comunidade.');
     } catch (error) {
       showAlert(error.message, 'danger');
     }
@@ -403,9 +457,9 @@ document.getElementById('login-form').addEventListener('submit', async event => 
   }
 });
 
-document.getElementById('item-image').addEventListener('change', event => {
+function previewImage(event, previewId) {
   const file = event.target.files[0];
-  const preview = document.getElementById('image-preview');
+  const preview = document.getElementById(previewId);
   if (!file) {
     preview.classList.add('hidden');
     preview.innerHTML = '';
@@ -419,23 +473,37 @@ document.getElementById('item-image').addEventListener('change', event => {
   }
   const reader = new FileReader();
   reader.onload = () => {
-    preview.innerHTML = `<img src="${escapeHTML(reader.result)}" alt="Prévia da roupa">`;
+    preview.innerHTML = `<img src="${escapeHTML(reader.result)}" alt="Prévia da imagem">`;
     preview.classList.remove('hidden');
   };
+  reader.onerror = () => showAlert('Não foi possível carregar a imagem.', 'danger');
   reader.readAsDataURL(file);
+}
+
+function readImage(file) {
+  if (!file) return Promise.resolve('');
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Não foi possível carregar a imagem.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('item-image').addEventListener('change', event => {
+  previewImage(event, 'image-preview');
+});
+
+document.getElementById('post-image').addEventListener('change', event => {
+  previewImage(event, 'post-image-preview');
 });
 
 document.getElementById('donation-form').addEventListener('submit', async event => {
   event.preventDefault();
   const file = document.getElementById('item-image').files[0];
-  const readImage = file ? new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  }) : Promise.resolve('');
 
   try {
-    const image = await readImage;
+    const image = await readImage(file);
     await api('/api/donations', {
       method: 'POST',
       body: JSON.stringify({
