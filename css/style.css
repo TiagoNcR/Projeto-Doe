@@ -13,7 +13,7 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .navbar-brand { color: var(--rosa-escuro); font-family: 'Sofia', cursive; font-size: 34px; }
 .navbar-brand:hover { color: var(--rosa); }
 .navbar-brand span { font-family: Arial, sans-serif; }
-.header-note { color: #987b84; font-size: 13px; }
+.header-note { color: #987b84; font-size: 20px; font-family: 'Sofia', cursive;}
 .header-actions { display: flex; align-items: center; gap: 18px; }
 .header-actions .header-link { border: 0; background: none; color: var(--rosa-escuro); font-weight: 700; }
 .header-user { min-width: 0; max-width: 260px; overflow: hidden; padding: 6px 11px; border: 1px solid var(--borda); border-radius: 20px; background: var(--bege); color: var(--texto); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
