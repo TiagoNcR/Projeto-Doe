@@ -9,6 +9,7 @@ Aplicação demonstrativa de uma comunidade para doação de roupas. Participant
 - Feed comunitário com doações e publicações independentes.
 - Publicações de texto, com foto opcional, para divulgar atividades e ações solidárias sem cadastrar uma roupa.
 - Cadastro de roupas com categoria, tamanho, condição, descrição e foto opcional.
+- Painel pessoal com um resumo das doações da conta.
 - Curtidas e comentários nas publicações.
 - Opção para seguir e deixar de seguir participantes.
 - Filtro do feed para ver todas as publicações ou somente as pessoas seguidas.
@@ -54,7 +55,7 @@ PORT=3001 npm start
 3. Use **Seguir** em uma publicação para acompanhar aquele participante. A aba **Seguindo** mostra as publicações de quem você segue.
 4. Use **Fazer publicação** no feed para compartilhar um texto e, se quiser, uma foto; não é necessário cadastrar uma roupa.
 5. Use **Mensagem** em uma publicação ou abra **Mensagens** para iniciar uma conversa privada. As mensagens novas são verificadas periodicamente enquanto a área está aberta.
-6. Curta ou comente publicações e doações. Para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
+6. Acesse **Painel** pela navegação para ver o resumo da conta. Curta ou comente publicações e doações; para gerenciar suas peças, acesse **Cadastrar**. Use **Sair** na navegação ou **Sair da conta** no painel para encerrar a sessão.
 7. Para testar com outra conta, encerre a sessão e crie ou acesse uma segunda conta no mesmo servidor.
 8. Clique no avatar fixo no canto inferior esquerdo para escolher ou alterar sua foto de perfil. São aceitas imagens PNG, JPG ou WebP de até 2 MB; sem foto, o avatar mostra as iniciais.
 

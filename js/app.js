@@ -57,6 +57,7 @@ function navigate(view) {
   views.forEach(name => {
     document.getElementById(`${name}-view`).classList.toggle('hidden', name !== view);
   });
+  document.getElementById('header-dashboard').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-feed').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-donations').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-messages').classList.toggle('hidden', !currentUserData);
