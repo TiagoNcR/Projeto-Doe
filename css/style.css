@@ -16,6 +16,7 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .header-note { color: #987b84; font-size: 13px; }
 .header-actions { display: flex; align-items: center; gap: 18px; }
 .header-actions .header-link { border: 0; background: none; color: var(--rosa-escuro); font-weight: 700; }
+.header-user { min-width: 0; max-width: 260px; overflow: hidden; padding: 6px 11px; border: 1px solid var(--borda); border-radius: 20px; background: var(--bege); color: var(--texto); font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .navbar .container { display: flex; align-items: center; justify-content: space-between; }
 .app-container { min-height: calc(100vh - 190px); padding-top: 42px; padding-bottom: 65px; }
 .auth-layout { display: grid; grid-template-columns: 1.1fr .9fr; gap: 55px; align-items: center; max-width: 1080px; margin: 22px auto; }
@@ -167,6 +168,7 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
   .header-actions { gap: 8px; }
   .header-actions { max-width: 155px; flex-wrap: wrap; justify-content: flex-end; }
   .header-actions .header-link { padding: 2px; font-size: 12px; white-space: nowrap; }
+  .header-user { max-width: 155px; }
   .feed-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
   .feed-heading h1 { font-size: 30px; }
   .feed-actions { width: 100%; }
@@ -182,4 +184,5 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 @media (max-width: 360px) {
   .navbar-brand { font-size: 29px; }
   .header-actions { max-width: 135px; }
+  .header-user { max-width: 135px; }
 }

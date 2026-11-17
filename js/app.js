@@ -60,6 +60,12 @@ function navigate(view) {
   document.getElementById('header-feed').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-donations').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-messages').classList.toggle('hidden', !currentUserData);
+  const headerUser = document.getElementById('header-user');
+  const accountEmail = currentUserData ? currentUserData.email : '';
+  headerUser.textContent = currentUserData ? `Conta: ${accountEmail}` : '';
+  headerUser.title = currentUserData ? `${currentUserData.name} (${accountEmail})` : '';
+  headerUser.setAttribute('aria-label', currentUserData ? `Conta conectada: ${currentUserData.name}, ${accountEmail}` : '');
+  headerUser.classList.toggle('hidden', !currentUserData);
   document.getElementById('header-logout').classList.toggle('hidden', !currentUserData);
   alertArea.innerHTML = '';
   if (view === 'dashboard') updateDashboard();
