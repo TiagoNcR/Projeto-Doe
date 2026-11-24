@@ -6,6 +6,29 @@ const { parseDataImage } = require('../utils/images');
 const MAX_PROFILE_IMAGE_LENGTH = 3 * 1024 * 1024;
 const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024;
 const PROFILE_IMAGE_ERROR = 'A foto deve ser PNG, JPG ou WebP e ter até 2 MB.';
+const PROFILE_TYPES = new Set([
+  'Doador',
+  'Beneficiário',
+  'Ambos',
+  'Instituição/Organizador'
+]);
+
+function isValidEmail(email) {
+  if (email.length > 254) return false;
+  const [localPart, ...domainParts] = email.split('@');
+  if (!localPart || domainParts.length !== 1 || !domainParts[0]) return false;
+  if (localPart.length > 64 || localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) {
+    return false;
+  }
+  if (!/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(localPart)) return false;
+
+  const domainLabels = domainParts[0].split('.');
+  return domainLabels.length >= 2 && domainLabels.every(label =>
+    label.length > 0 &&
+    label.length <= 63 &&
+    /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label)
+  );
+}
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   return {
@@ -20,8 +43,11 @@ function register(body) {
   const type = String(body.type || 'Doador');
   const password = String(body.password || '');
 
-  if (name.length < 3 || !email.includes('@') || password.length < 6) {
-    throw new HttpError(400, 'Confira nome, e-mail e senha (mínimo 6 caracteres).');
+  if (name.length < 3 || !isValidEmail(email) || password.length < 6) {
+    throw new HttpError(400, 'Confira nome, e-mail válido e senha (mínimo 6 caracteres).');
+  }
+  if (!PROFILE_TYPES.has(type)) {
+    throw new HttpError(400, 'Selecione um tipo de participante válido.');
   }
 
   const database = getDatabase();
