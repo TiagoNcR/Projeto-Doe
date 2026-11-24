@@ -10,6 +10,7 @@ const postService = require('./postService');
 
 const organizer = { id: 'organizer-1', name: 'Instituição Exemplo', type: 'Instituição/Organizador' };
 const donor = { id: 'donor-1', name: 'Pessoa Doadora', type: 'Doador' };
+const validImage = 'data:image/png;base64,AQID';
 
 beforeEach(() => {
   database = {
@@ -21,23 +22,27 @@ beforeEach(() => {
 
 test('only institutions and organizers can add an event date to a post', () => {
   assert.throws(
-    () => postService.createPost(donor, { text: 'Atividade', eventDate: '2026-04-15' }),
+    () => postService.createPost(donor, { text: 'Atividade', eventDate: '2026-04-15', image: validImage }),
     error => error.status === 403
   );
-  assert.equal(postService.createPost(donor, { text: 'Publicação comum' }).eventDate, undefined);
+  assert.equal(postService.createPost(donor, { text: 'Publicação comum', image: validImage }).eventDate, undefined);
+});
+
+test('posts can be text-only', () => {
+  assert.equal(postService.createPost(donor, { text: 'Mensagem somente textual' }).text, 'Mensagem somente textual');
 });
 
 test('event dates must be valid calendar dates', () => {
   assert.throws(
-    () => postService.createPost(organizer, { text: 'Atividade', eventDate: '2026-02-30' }),
+    () => postService.createPost(organizer, { text: 'Atividade', eventDate: '2026-02-30', image: validImage }),
     error => error.status === 400
   );
 });
 
 test('calendar results include only dated posts from the requested month', () => {
-  postService.createPost(organizer, { text: 'Mutirão', eventDate: '2026-04-15' });
-  postService.createPost(organizer, { text: 'Encontro', eventDate: '2026-05-01' });
-  postService.createPost(organizer, { text: 'Aviso sem data' });
+  postService.createPost(organizer, { text: 'Mutirão', eventDate: '2026-04-15', image: validImage });
+  postService.createPost(organizer, { text: 'Encontro', eventDate: '2026-05-01', image: validImage });
+  postService.createPost(organizer, { text: 'Aviso sem data', image: validImage });
 
   const events = postService.listEvents('2026-04');
   assert.equal(events.length, 1);

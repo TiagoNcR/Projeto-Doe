@@ -8,7 +8,7 @@ Aplicação demonstrativa de uma comunidade para doação de roupas. Participant
 - Perfil de participação: doador, beneficiário, ambos ou instituição/organizador.
 - Feed comunitário com doações e publicações independentes.
 - Publicações de texto, com foto opcional, para divulgar atividades e ações solidárias sem cadastrar uma roupa.
-- Cadastro de roupas com categoria, tamanho, condição, descrição e foto opcional.
+- Cadastro de roupas com categoria, tamanho, condição, descrição e foto obrigatória.
 - Perfil **Instituição/Organizador**, com opção de associar uma data às publicações e divulgá-las no calendário mensal da comunidade.
 - Calendário mensal para consultar as atividades organizadas por data.
 - Painel pessoal com um resumo das doações da conta.

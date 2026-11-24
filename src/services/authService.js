@@ -1,8 +1,11 @@
 const crypto = require('crypto');
 const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
+const { parseDataImage } = require('../utils/images');
 
 const MAX_PROFILE_IMAGE_LENGTH = 3 * 1024 * 1024;
+const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024;
+const PROFILE_IMAGE_ERROR = 'A foto deve ser PNG, JPG ou WebP e ter até 2 MB.';
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   return {
@@ -65,16 +68,12 @@ function logout(id) {
   saveDatabase();
 }
 
-function parseProfileImage(image) {
-  const match = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(image);
-  return match ? { contentType: match[1], base64: match[2] } : null;
-}
-
 function updateProfileImage(user, value) {
   const image = typeof value === 'string' ? value : '';
-  if (image.length > MAX_PROFILE_IMAGE_LENGTH || !parseProfileImage(image)) {
-    throw new HttpError(400, 'A foto deve ser PNG, JPG ou WebP e ter até 2 MB.');
+  if (image.length > MAX_PROFILE_IMAGE_LENGTH) {
+    throw new HttpError(400, PROFILE_IMAGE_ERROR);
   }
+  parseDataImage(image, MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_ERROR);
 
   user.profileImage = image;
   user.profileImageUpdatedAt = new Date().toISOString();
@@ -86,9 +85,14 @@ function getProfileImage(userId) {
   const user = getDatabase().users.find(item => item.id === userId);
   if (!user) throw new HttpError(404, 'Participante não encontrado.');
 
-  const image = parseProfileImage(user.profileImage || '');
+  let image;
+  try {
+    image = parseDataImage(user.profileImage || '', MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_ERROR);
+  } catch {
+    image = null;
+  }
   if (!image) throw new HttpError(404, 'Foto de perfil não encontrada.');
-  return { contentType: image.contentType, buffer: Buffer.from(image.base64, 'base64') };
+  return { contentType: image.contentType, buffer: image.buffer };
 }
 
 module.exports = { getProfileImage, login, logout, register, updateProfileImage };

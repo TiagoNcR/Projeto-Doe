@@ -2,6 +2,10 @@ const crypto = require('crypto');
 const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
 const { publicDonation } = require('../utils/serializers');
+const { validateRequiredDataImage } = require('../utils/images');
+
+const MAX_DONATION_IMAGE_BYTES = 5 * 1024 * 1024;
+const DONATION_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 5 MB.';
 
 function listDonations(user, filter) {
   const database = getDatabase();
@@ -24,9 +28,11 @@ function listDonations(user, filter) {
 function createDonation(user, body) {
   const name = String(body.name || '').trim();
   if (!name) throw new HttpError(400, 'Informe o nome da peça.');
-  if (body.image && (!String(body.image).startsWith('data:image/') || String(body.image).length > 5 * 1024 * 1024)) {
-    throw new HttpError(400, 'Envie uma imagem válida com até 5 MB.');
-  }
+  const image = validateRequiredDataImage(
+    body.image,
+    MAX_DONATION_IMAGE_BYTES,
+    DONATION_IMAGE_ERROR
+  );
 
   const donation = {
     id: crypto.randomUUID(),
@@ -35,7 +41,7 @@ function createDonation(user, body) {
     size: String(body.size || 'Único'),
     condition: String(body.condition || 'Boa'),
     description: String(body.description || '').trim().slice(0, 180),
-    image: String(body.image || ''),
+    image,
     ownerId: user.id,
     likes: [],
     comments: [],

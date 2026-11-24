@@ -2,8 +2,11 @@ const crypto = require('crypto');
 const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
 const { publicPost } = require('../utils/serializers');
+const { validateOptionalDataImage } = require('../utils/images');
 
 const organizerRole = 'Instituição/Organizador';
+const MAX_POST_IMAGE_BYTES = 5 * 1024 * 1024;
+const POST_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 5 MB.';
 
 function isValidEventDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -38,14 +41,16 @@ function createPost(user, body) {
   if (eventDate && !isValidEventDate(eventDate)) {
     throw new HttpError(400, 'Informe uma data válida para a atividade.');
   }
-  if (body.image && (!String(body.image).startsWith('data:image/') || String(body.image).length > 5 * 1024 * 1024)) {
-    throw new HttpError(400, 'Envie uma imagem válida com até 5 MB.');
-  }
+  const image = validateOptionalDataImage(
+    body.image,
+    MAX_POST_IMAGE_BYTES,
+    POST_IMAGE_ERROR
+  );
 
   const post = {
     id: crypto.randomUUID(),
     text,
-    image: String(body.image || ''),
+    image,
     ownerId: user.id,
     likes: [],
     comments: [],

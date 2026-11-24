@@ -684,8 +684,8 @@ function previewImage(event, previewId) {
     preview.innerHTML = '';
     return;
   }
-  if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
-    showAlert('Selecione uma imagem com até 5 MB.', 'warning');
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    showAlert('Selecione uma imagem PNG, JPG ou WebP com até 5 MB.', 'warning');
     event.target.value = '';
     preview.classList.add('hidden');
     return;
