@@ -13,19 +13,26 @@ function defaultDatabase() {
   };
 }
 
-function loadDatabase() {
+function loadDatabase(filePath = databaseFile) {
+  let contents;
   try {
-    const value = JSON.parse(fs.readFileSync(databaseFile, 'utf8'));
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      throw new Error('O conteúdo de data.json não é um objeto.');
-    }
-    return value;
+    contents = fs.readFileSync(filePath, 'utf8');
   } catch (error) {
-    if (error.code !== 'ENOENT') {
-      console.error('Não foi possível carregar data.json.', error.message);
-    }
-    return defaultDatabase();
+    if (error.code === 'ENOENT') return defaultDatabase();
+    throw new Error(`Não foi possível ler o banco de dados em "${filePath}".`, { cause: error });
   }
+
+  let value;
+  try {
+    value = JSON.parse(contents);
+  } catch (error) {
+    throw new Error(`O arquivo de banco de dados "${filePath}" contém JSON inválido.`, { cause: error });
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`O arquivo de banco de dados "${filePath}" deve conter um objeto JSON.`);
+  }
+  return value;
 }
 
 function normalizeDatabase(database) {
@@ -65,4 +72,4 @@ function saveDatabase() {
   fs.writeFileSync(databaseFile, JSON.stringify(database, null, 2));
 }
 
-module.exports = { getDatabase, normalizeDatabase, saveDatabase };
+module.exports = { getDatabase, loadDatabase, normalizeDatabase, saveDatabase };

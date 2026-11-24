@@ -69,6 +69,8 @@ O servidor lê e grava usuários, sessões, doações, publicações, curtidas, 
 
 Faça uma cópia de segurança de `data.json` antes de removê-lo ou substituí-lo. Apagar esse arquivo reinicializa os dados da aplicação. Como ele pode conter informações de contas e publicações, não compartilhe nem publique uma cópia preenchida com dados reais.
 
+Se `data.json` existir, mas estiver inválido ou inacessível, o servidor encerra a inicialização com uma mensagem de erro em vez de iniciar com um banco vazio e sobrescrever os dados.
+
 ## API principal
 
 As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, curtida, comentário, seguir, mensagens e exclusão exigem uma sessão, criada por cookie HTTP. Cadastro e login criam essa sessão.
