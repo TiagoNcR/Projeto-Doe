@@ -73,6 +73,11 @@ function navigate(view) {
   document.getElementById('header-donations').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-messages').classList.toggle('hidden', !currentUserData);
   document.getElementById('header-logout').classList.toggle('hidden', !currentUserData);
+  document.body.classList.toggle('is-authenticated', Boolean(currentUserData));
+  document.querySelectorAll('.header-actions [data-view]').forEach(button => {
+    if (button.dataset.view === view) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
   renderProfileAvatar();
   if (currentUserData) {
     if (view !== 'messages') refreshNotifications();

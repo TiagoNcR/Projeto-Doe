@@ -2,7 +2,8 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#a94f6c" />
     <meta
       name="description"
       content="Projeto Doe - solidariedade que conecta e transforma."
@@ -21,18 +22,35 @@
   <body>
     <aside class="site-sidebar">
       <div class="sidebar-brand">
-        <a class="navbar-brand" href="#" data-view="feed">Projeto Doe <span>♡</span></a>
+        <a class="navbar-brand" href="#" data-view="feed" aria-label="Projeto Doe"><span class="brand-text">Projeto Doe</span> <span class="brand-heart" aria-hidden="true">♡</span></a>
         <span class="header-note">Solidariedade que transforma</span>
       </div>
       <nav class="header-actions" aria-label="Navegação principal">
-        <button class="header-link hidden" id="header-dashboard" type="button" data-view="dashboard">Painel</button>
-        <button class="header-link hidden" id="header-feed" type="button" data-view="feed">Feed</button>
-        <button class="header-link hidden" id="header-calendar" type="button" data-view="calendar">Calendário</button>
-        <button class="header-link hidden" id="header-donations" type="button" data-view="donations">Cadastrar</button>
-        <button class="header-link hidden" id="header-messages" type="button" data-view="messages">Mensagens</button>
-        <button class="header-link hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta">Sair</button>
+        <button class="header-link hidden" id="header-dashboard" type="button" data-view="dashboard" title="Painel">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11l9-8 9 8" /><path d="M5 10v10h14V10" /><path d="M10 20v-6h4v6" /></svg>
+          <span class="nav-label">Painel</span>
+        </button>
+        <button class="header-link hidden" id="header-feed" type="button" data-view="feed" title="Feed">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M4 10h16" /><path d="M8 14h8M8 17h5" /></svg>
+          <span class="nav-label">Feed</span>
+        </button>
+        <button class="header-link hidden" id="header-calendar" type="button" data-view="calendar" title="Calendário">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+          <span class="nav-label">Calendário</span>
+        </button>
+        <button class="header-link hidden" id="header-donations" type="button" data-view="donations" title="Cadastrar">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg>
+          <span class="nav-label">Cadastrar</span>
+        </button>
+        <button class="header-link hidden" id="header-messages" type="button" data-view="messages" title="Mensagens">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></svg>
+          <span class="nav-label">Mensagens</span>
+        </button>
       </nav>
       <div class="sidebar-user-controls">
+        <button class="logout-button hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta" title="Sair da conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /></svg>
+        </button>
         <button id="notification-bell" class="notification-bell hidden" type="button" data-view="messages" aria-label="Abrir mensagens" title="Abrir mensagens">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
