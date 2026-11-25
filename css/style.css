@@ -388,7 +388,8 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
    (descontada a barra lateral), não da largura da janela */
 @container (max-width: 720px) {
   .feed-layout, .calendar-layout { grid-template-columns: minmax(0, 1fr); }
-  .feed-calendar-panel { position: static; }
+  /* Em uma coluna o calendário ficaria abaixo de todas as publicações; a aba Calendário já cobre esse uso */
+  .feed-calendar-panel { display: none; }
 }
 @container (max-width: 640px) {
   .donations-layout { grid-template-columns: minmax(0, 1fr); }
