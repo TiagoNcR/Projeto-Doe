@@ -100,6 +100,7 @@ function navigate(view) {
   }
   if (view === 'calendar') loadCalendarMonth();
   if (view === 'messages') {
+    if (activeConversationId) showConversationShell(activeConversationId);
     loadConversations(activeConversationId, { autoSelectUnread: true });
     messageRefreshTimer = setInterval(refreshChat, 4000);
   }
@@ -111,6 +112,31 @@ function navigate(view) {
   }
   document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : view === 'notifications' ? 'Notificações' : 'Doações'}`;
   history.replaceState(null, '', view === 'login' ? '/' : view === 'profile' ? `#profile/${encodeURIComponent(profileUserId)}` : `#${view}`);
+}
+
+// Nome já conhecido de quem vai ter a conversa aberta, para o cabeçalho aparecer antes da resposta do servidor
+let pendingConversationName = '';
+
+function openConversation(userId, name = '') {
+  activeConversationId = userId;
+  pendingConversationName = name || '';
+  navigate('messages');
+}
+
+// Mostra a conversa na hora (cabeçalho e "Carregando…"), sem passar pela lista de conversas;
+// loadConversations() completa com as mensagens quando a resposta chegar.
+function showConversationShell(userId) {
+  const contact = conversationContacts.find(item => item.id === userId);
+  document.getElementById('chat-placeholder').classList.add('hidden');
+  document.getElementById('active-chat').classList.remove('hidden');
+  document.querySelector('.chat-layout').classList.add('has-active-chat');
+  document.body.classList.add('chat-open');
+  document.getElementById('chat-title').textContent = contact?.name || pendingConversationName || 'Conversa';
+  const history = document.getElementById('chat-history');
+  if (history.dataset.conversationId !== userId) {
+    history.innerHTML = '<p class="chat-empty">Carregando mensagens…</p>';
+    delete history.dataset.conversationId;
+  }
 }
 
 function openProfile(userId) {
@@ -149,7 +175,7 @@ async function loadProfile() {
     ].join('');
     document.getElementById('profile-actions').innerHTML = data.isMe
       ? '<button class="btn btn-outline-doe" type="button" data-change-avatar>Alterar foto</button>'
-      : `<button class="btn btn-outline-doe" type="button" data-message-user="${escapeHTML(profile.id)}">Mensagem</button>
+      : `<button class="btn btn-outline-doe" type="button" data-message-user="${escapeHTML(profile.id)}" data-message-name="${escapeHTML(profile.name)}">Mensagem</button>
          <button class="btn ${data.followingUser ? 'btn-outline-doe' : 'btn-doe'}" type="button" data-follow="${escapeHTML(profile.id)}">${data.followingUser ? 'Seguindo' : 'Seguir'}</button>`;
     renderProfileItems(data.isMe ? 'Você' : profile.name.split(' ')[0]);
   } catch (error) {
@@ -324,7 +350,7 @@ async function loadNotifications() {
       ? data.notifications.map(item => `
           <li>
             <button class="notification-item ${item.read ? '' : 'unread'}" type="button"
-              data-notification-type="${escapeHTML(item.type)}" data-notification-actor="${escapeHTML(item.actor.id)}">
+              data-notification-type="${escapeHTML(item.type)}" data-notification-actor="${escapeHTML(item.actor.id)}" data-notification-actor-name="${escapeHTML(item.actor.name)}">
               ${avatarMarkup(item.actor.name, item.actor.avatarUrl, 'conversation-avatar')}
               <span class="notification-body">
                 <span class="notification-text">${notificationText(item)}</span>
@@ -468,7 +494,7 @@ function donationInterestMarkup(item) {
       : '';
   } else if (item.reservedForMe || item.interestedByMe) {
     action = `${item.interestedByMe && item.status === 'available' ? '<span class="donation-interest-note">Interesse enviado</span>' : ''}
-      <button class="btn btn-outline-doe btn-interest" type="button" data-message-user="${escapeHTML(item.ownerId)}">Abrir conversa</button>`;
+      <button class="btn btn-outline-doe btn-interest" type="button" data-message-user="${escapeHTML(item.ownerId)}" data-message-name="${escapeHTML(item.ownerName)}">Abrir conversa</button>`;
   } else if (item.status === 'available') {
     action = `<button class="btn btn-doe btn-interest" type="button" data-interest="${escapeHTML(item.id)}">Tenho interesse</button>`;
   }
@@ -572,7 +598,7 @@ function renderFeedItem(item) {
           </a>
           <div class="post-header-actions">
             ${item.ownerId !== currentUserData.id
-              ? `<button class="message-button" type="button" data-message-user="${escapeHTML(item.ownerId)}" aria-label="Enviar mensagem para ${escapeHTML(item.ownerName)}" title="Mensagem">
+              ? `<button class="message-button" type="button" data-message-user="${escapeHTML(item.ownerId)}" data-message-name="${escapeHTML(item.ownerName)}" aria-label="Enviar mensagem para ${escapeHTML(item.ownerName)}" title="Mensagem">
                   <svg class="message-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></svg>
                   <span class="message-label">Mensagem</span>
                 </button><button class="follow-button ${item.followingOwner ? 'following' : ''}" type="button" data-follow="${escapeHTML(item.ownerId)}">${item.followingOwner ? 'Seguindo' : 'Seguir'}</button>`
@@ -638,7 +664,7 @@ async function loadMyDonations() {
             </select>
             ${interests.length
               ? `<p class="donation-interest-note">${interestedPeopleLabel(interests.length)}. Toque para conversar:</p>
-                 <div class="interest-chips">${interests.map(person => `<button class="interest-chip" type="button" data-message-user="${escapeHTML(person.userId)}">${escapeHTML(person.name)}</button>`).join('')}</div>`
+                 <div class="interest-chips">${interests.map(person => `<button class="interest-chip" type="button" data-message-user="${escapeHTML(person.userId)}" data-message-name="${escapeHTML(person.name)}">${escapeHTML(person.name)}</button>`).join('')}</div>`
               : '<p class="donation-interest-note">Ninguém demonstrou interesse ainda. Para reservar, a pessoa precisa tocar em “Tenho interesse” no feed.</p>'}
           </div>
         </div>
@@ -772,12 +798,12 @@ document.addEventListener('click', async event => {
 
   const messageButton = event.target.closest('[data-message-user]');
   if (messageButton) {
-    activeConversationId = messageButton.dataset.messageUser;
-    navigate('messages');
+    openConversation(messageButton.dataset.messageUser, messageButton.dataset.messageName);
   }
 
   const conversationButton = event.target.closest('[data-chat-user]');
   if (conversationButton) {
+    showConversationShell(conversationButton.dataset.chatUser);
     await loadConversations(conversationButton.dataset.chatUser);
   }
 
@@ -791,8 +817,7 @@ document.addEventListener('click', async event => {
     interestButton.disabled = true;
     try {
       const data = await api(`/api/donations/${encodeURIComponent(interestButton.dataset.interest)}/interest`, { method: 'POST' });
-      activeConversationId = data.contactId;
-      navigate('messages');
+      openConversation(data.contactId, data.donation.ownerName);
       if (!data.alreadyInterested) showAlert('Interesse enviado! Continue a conversa com quem está doando.');
     } catch (error) {
       showAlert(error.message, 'danger');
@@ -850,8 +875,7 @@ document.addEventListener('click', async event => {
       openProfile(notificationItem.dataset.notificationActor);
     } else if (type === 'interest') {
       // Abre a conversa com quem demonstrou interesse, que já começa com a mensagem citando a peça
-      activeConversationId = notificationItem.dataset.notificationActor;
-      navigate('messages');
+      openConversation(notificationItem.dataset.notificationActor, notificationItem.dataset.notificationActorName);
     } else {
       openProfile(currentUserData.id);
     }
