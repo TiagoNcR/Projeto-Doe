@@ -134,3 +134,49 @@ test('only the owner sees who is interested; others see the count and their own 
   assert.equal(asOther.interestedByMe, false);
   assert.equal(asOther.reservedForMe, false);
 });
+
+function addDonation(fields) {
+  return donationService.createDonation(owner, { category: 'Outros', size: 'M', condition: 'Boa', image: validImage, ...fields });
+}
+
+test('search ignores accents and case, and matches the start of words in name, description or category', () => {
+  addDonation({ name: 'Calça jeans', category: 'Calças', size: '38' });
+  addDonation({ name: 'Blusa', description: 'Tecido de LÃ, bem quentinha', category: 'Camisetas' });
+  addDonation({ name: 'Tênis branco', category: 'Calçados' });
+
+  const names = query => donationService.searchDonations(other, { q: query }).items.map(item => item.name);
+  assert.deepEqual(names('calca jeans'), ['Calça jeans']);
+  // "calça" e "calçados" começam igual, então a busca por "calca" encontra os dois
+  assert.deepEqual(names('calca'), ['Tênis branco', 'Calça jeans']);
+  assert.deepEqual(names('LA quentinha'), ['Blusa']);
+  assert.deepEqual(names('calcados'), ['Tênis branco']);
+  assert.deepEqual(names('TEN'), ['Tênis branco']);
+  assert.deepEqual(names('usa'), []);
+  assert.deepEqual(names('tenis preto'), []);
+  assert.equal(names('').length, 3);
+});
+
+test('search filters by exact category and size, newest first', () => {
+  addDonation({ name: 'Casaco infantil', category: 'Casacos', size: 'Infantil' });
+  addDonation({ name: 'Casaco adulto', category: 'Casacos', size: 'G' });
+  addDonation({ name: 'Camiseta infantil', category: 'Camisetas', size: 'Infantil' });
+
+  const names = criteria => donationService.searchDonations(other, criteria).items.map(item => item.name);
+  assert.deepEqual(names({ category: 'Casacos' }), ['Casaco adulto', 'Casaco infantil']);
+  assert.deepEqual(names({ size: 'Infantil' }), ['Camiseta infantil', 'Casaco infantil']);
+  assert.deepEqual(names({ category: 'Casacos', size: 'Infantil' }), ['Casaco infantil']);
+});
+
+test('search can show only available donations, keeping the feed shape', () => {
+  const reserved = addDonation({ name: 'Casaco reservado', category: 'Casacos' });
+  addDonation({ name: 'Casaco livre', category: 'Casacos' });
+  donationService.expressInterest(interested, reserved.id);
+  donationService.updateDonationStatus(owner, reserved.id, { status: 'reserved', reservedFor: interested.id });
+
+  const all = donationService.searchDonations(other, { category: 'Casacos' }).items;
+  const available = donationService.searchDonations(other, { category: 'Casacos', onlyAvailable: true }).items;
+  assert.equal(all.length, 2);
+  assert.deepEqual(available.map(item => item.name), ['Casaco livre']);
+  assert.equal(available[0].kind, 'donation');
+  assert.equal(available[0].interests, undefined);
+});

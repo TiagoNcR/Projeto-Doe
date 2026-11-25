@@ -39,6 +39,15 @@ function donationForUser(item, user) {
   return donation;
 }
 
+function toFeedItem(item, user) {
+  return {
+    ...donationForUser(item, user),
+    kind: 'donation',
+    likedByMe: Boolean(user && item.likes.includes(user.id)),
+    followingOwner: Boolean(user && Array.isArray(user.following) && user.following.includes(item.ownerId))
+  };
+}
+
 function listDonations(user, filter) {
   const database = getDatabase();
   let items = database.donations.slice().reverse();
@@ -47,14 +56,32 @@ function listDonations(user, filter) {
     items = items.filter(item => following.includes(item.ownerId));
   }
 
-  const donations = items.map(item => ({
-    ...donationForUser(item, user),
-    kind: 'donation',
-    likedByMe: Boolean(user && item.likes.includes(user.id)),
-    followingOwner: Boolean(user && Array.isArray(user.following) && user.following.includes(item.ownerId))
-  }));
+  const donations = items.map(item => toFeedItem(item, user));
   const following = user && Array.isArray(user.following) ? user.following : [];
   return { donations, followingCount: following.length };
+}
+
+// Compara sem diferenciar maiúsculas nem acentos ("calcas" encontra "Calças").
+function normalizeText(value) {
+  return String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+function searchDonations(user, criteria = {}) {
+  const terms = normalizeText(criteria.q).split(/\s+/).filter(Boolean).slice(0, 10);
+  const category = String(criteria.category || '');
+  const size = String(criteria.size || '');
+  const onlyAvailable = Boolean(criteria.onlyAvailable);
+
+  const items = getDatabase().donations.slice().reverse().filter(item => {
+    if (category && item.category !== category) return false;
+    if (size && item.size !== size) return false;
+    if (onlyAvailable && (item.status || 'available') !== 'available') return false;
+    if (!terms.length) return true;
+    // Cada termo precisa ser o começo de alguma palavra ("cas" acha "casaco"; "usa" não acha "blusa").
+    const words = normalizeText(`${item.name} ${item.description} ${item.category}`).split(/[^a-z0-9]+/).filter(Boolean);
+    return terms.every(term => words.some(word => word.startsWith(term)));
+  });
+  return { items: items.map(item => toFeedItem(item, user)) };
 }
 
 function createDonation(user, body) {
@@ -164,5 +191,6 @@ module.exports = {
   expressInterest,
   listDonations,
   removeDonation,
+  searchDonations,
   updateDonationStatus
 };

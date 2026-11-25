@@ -404,13 +404,60 @@ function donationInterestMarkup(item) {
   return `<div class="donation-interest">${donationStatusBadge(item)}<div class="donation-interest-action">${action}</div></div>`;
 }
 
+// Opções de categoria e tamanho da busca vêm do formulário de cadastro, para não duplicar as listas.
+function fillDonationSearchOptions() {
+  for (const [sourceId, targetId] of [['item-category', 'donation-search-category'], ['item-size', 'donation-search-size']]) {
+    const target = document.getElementById(targetId);
+    if (target.options.length > 1) continue;
+    for (const option of document.getElementById(sourceId).options) target.add(new Option(option.text, option.value));
+  }
+}
+
+function donationSearchParams() {
+  const params = new URLSearchParams();
+  const text = document.getElementById('donation-search-text').value.trim();
+  const category = document.getElementById('donation-search-category').value;
+  const size = document.getElementById('donation-search-size').value;
+  if (text) params.set('q', text);
+  if (category) params.set('category', category);
+  if (size) params.set('size', size);
+  if (document.getElementById('donation-search-available').checked) params.set('available', '1');
+  return params;
+}
+
+function resetDonationSearch() {
+  document.getElementById('donation-search').reset();
+}
+
+let feedRequestId = 0;
+
 async function loadFeed() {
+  const requestId = ++feedRequestId;
+  const searchingDonations = feedFilter === 'donations';
+  document.getElementById('donation-search').classList.toggle('hidden', !searchingDonations);
+  document.getElementById('stories').classList.toggle('hidden', searchingDonations);
+  document.querySelectorAll('[data-feed-filter]').forEach(button => {
+    button.classList.toggle('active', button.dataset.feedFilter === feedFilter);
+  });
   try {
-    const data = await api(`/api/feed?filter=${feedFilter}`);
+    if (searchingDonations) fillDonationSearchOptions();
+    const data = searchingDonations
+      ? await api(`/api/donations?${donationSearchParams()}`)
+      : await api(`/api/feed?filter=${feedFilter}`);
+    // Ignora respostas antigas quando a pessoa digita ou troca de filtro rapidamente
+    if (requestId !== feedRequestId) return;
     feedItems = data.items;
-    document.querySelectorAll('[data-feed-filter]').forEach(button => {
-      button.classList.toggle('active', button.dataset.feedFilter === feedFilter);
-    });
+    if (searchingDonations) {
+      const count = feedItems.length;
+      document.getElementById('donation-search-summary').textContent = count
+        ? `${count} ${count === 1 ? 'doação encontrada' : 'doações encontradas'}`
+        : '';
+      document.getElementById('feed-list').innerHTML = count
+        ? feedItems.map(renderFeedItem).join('')
+        : `<div class="empty-state">Nenhuma doação encontrada com esses filtros.<br>
+             <button class="text-button" type="button" data-clear-donation-search>Limpar filtros</button></div>`;
+      return;
+    }
     const uniqueOwners = [...new Map(feedItems.map(item => [item.ownerId, item])).values()].slice(0, 10);
     document.getElementById('stories').innerHTML = uniqueOwners.length
       ? uniqueOwners.map(item => `
@@ -740,6 +787,11 @@ document.addEventListener('click', async event => {
     document.getElementById('profile-avatar-input').click();
   }
 
+  if (event.target.closest('[data-clear-donation-search]')) {
+    resetDonationSearch();
+    await loadFeed();
+  }
+
   const filterButton = event.target.closest('[data-feed-filter]');
   if (filterButton) {
     feedFilter = filterButton.dataset.feedFilter;
@@ -915,6 +967,19 @@ document.addEventListener('change', async event => {
     showAlert(error.message, 'danger');
   }
   await loadMyDonations();
+});
+
+let donationSearchTimer = null;
+const donationSearchForm = document.getElementById('donation-search');
+donationSearchForm.addEventListener('input', event => {
+  clearTimeout(donationSearchTimer);
+  // Texto: espera a pessoa parar de digitar; filtros: atualiza na hora
+  donationSearchTimer = setTimeout(loadFeed, event.target.type === 'search' ? 300 : 0);
+});
+donationSearchForm.addEventListener('submit', event => {
+  event.preventDefault();
+  clearTimeout(donationSearchTimer);
+  loadFeed();
 });
 
 document.getElementById('profile-avatar-input').addEventListener('change', async event => {

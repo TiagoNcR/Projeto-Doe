@@ -469,3 +469,16 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
   .profile-actions { width: 100%; }
   .profile-actions .btn { flex: 1; }
 }
+
+/* Busca de doações no feed */
+.donation-search { display: grid; gap: 10px; margin: 0 0 18px; }
+.donation-search-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.donation-search-filters .form-select { flex: 1 1 13rem; width: auto; min-width: 0; }
+.donation-search-available { display: flex; align-items: center; gap: 8px; margin: 0; padding-left: 0; white-space: nowrap; }
+.donation-search-available .form-check-input { float: none; margin: 0; }
+.donation-search-summary { min-height: 1.25em; margin: 0; color: #88777d; font-size: 0.875rem; }
+.donation-search-summary:empty { display: none; }
+@media (pointer: coarse) {
+  .donation-search-available .form-check-input { width: 22px; height: 22px; }
+  .donation-search-available { min-height: 44px; }
+}

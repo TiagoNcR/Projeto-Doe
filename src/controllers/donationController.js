@@ -43,4 +43,15 @@ async function updateStatus(req, res, donationId) {
   sendJson(res, 200, { donation });
 }
 
-module.exports = { comment, create, feed, interest, like, remove, updateStatus };
+function search(req, res) {
+  const user = requireUser(req, 'Faça login para buscar doações.');
+  const params = new URL(req.url, 'http://localhost').searchParams;
+  sendJson(res, 200, donationService.searchDonations(user, {
+    q: (params.get('q') || '').slice(0, 100),
+    category: params.get('category') || '',
+    size: params.get('size') || '',
+    onlyAvailable: params.get('available') === '1'
+  }));
+}
+
+module.exports = { comment, create, feed, interest, like, remove, search, updateStatus };

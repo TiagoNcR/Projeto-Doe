@@ -32,6 +32,7 @@ const routes = [
   { method: 'POST', pattern: /^\/api\/posts\/([^/]+)\/like$/, handler: postController.like },
   { method: 'POST', pattern: /^\/api\/posts\/([^/]+)\/comments$/, handler: postController.comment },
   { method: 'DELETE', pattern: /^\/api\/posts\/([^/]+)$/, handler: postController.remove },
+  { method: 'GET', pattern: /^\/api\/donations$/, handler: donationController.search },
   { method: 'POST', pattern: /^\/api\/donations$/, handler: donationController.create },
   { method: 'POST', pattern: /^\/api\/donations\/([^/]+)\/like$/, handler: donationController.like },
   {
