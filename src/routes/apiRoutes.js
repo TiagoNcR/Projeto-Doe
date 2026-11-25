@@ -1,6 +1,7 @@
 const authController = require('../controllers/authController');
 const donationController = require('../controllers/donationController');
 const messageController = require('../controllers/messageController');
+const notificationController = require('../controllers/notificationController');
 const postController = require('../controllers/postController');
 const socialController = require('../controllers/socialController');
 const { HttpError } = require('../utils/errors');
@@ -17,6 +18,8 @@ const routes = [
   { method: 'GET', pattern: /^\/api\/users\/([^/]+)\/avatar$/, handler: authController.avatar },
   { method: 'POST', pattern: /^\/api\/users\/([^/]+)\/follow$/, handler: socialController.toggleFollow },
   { method: 'GET', pattern: /^\/api\/users\/([^/]+)\/profile$/, handler: socialController.profile },
+  { method: 'GET', pattern: /^\/api\/notifications$/, handler: notificationController.list },
+  { method: 'POST', pattern: /^\/api\/notifications\/read$/, handler: notificationController.markAllAsRead },
   { method: 'GET', pattern: /^\/api\/conversations$/, handler: messageController.conversations },
   {
     method: 'GET',

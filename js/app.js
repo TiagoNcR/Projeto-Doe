@@ -1,4 +1,4 @@
-const views = ['login', 'register', 'dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile'];
+const views = ['login', 'register', 'dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile', 'notifications'];
 const organizerRole = 'Instituição/Organizador';
 const alertArea = document.getElementById('alert-area');
 let currentUserData = null;
@@ -60,7 +60,7 @@ async function logoutUser() {
 
 function navigate(view) {
   if (!views.includes(view)) return;
-  if (['dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile'].includes(view) && !currentUserData) view = 'login';
+  if (['dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile', 'notifications'].includes(view) && !currentUserData) view = 'login';
   if (view === 'profile' && !profileUserId) profileUserId = currentUserData.id;
   if (messageRefreshTimer) {
     clearInterval(messageRefreshTimer);
@@ -104,11 +104,12 @@ function navigate(view) {
     messageRefreshTimer = setInterval(refreshChat, 4000);
   }
   if (view === 'donations') loadMyDonations();
+  if (view === 'notifications') loadNotifications();
   if (view === 'profile') {
     profileFilter = 'all';
     loadProfile();
   }
-  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : 'Doações'}`;
+  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : view === 'notifications' ? 'Notificações' : 'Doações'}`;
   history.replaceState(null, '', view === 'login' ? '/' : view === 'profile' ? `#profile/${encodeURIComponent(profileUserId)}` : `#${view}`);
 }
 
@@ -228,27 +229,42 @@ function renderProfileAvatar() {
   button.setAttribute('aria-label', `Ver meu perfil (${currentUserData.name})`);
 }
 
-function renderNotificationCount(count) {
+// O sino soma mensagens não lidas e notificações (curtidas, comentários, seguidores, interesse).
+let unreadMessageCount = 0;
+let unreadNotificationCount = 0;
+
+function pluralLabel(count, singular, plural) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function renderBell() {
   const bell = document.getElementById('notification-bell');
   const badge = document.getElementById('notification-badge');
-  const unreadCount = Math.max(0, Math.trunc(Number(count) || 0));
-  const label = unreadCount
-    ? `${unreadCount} ${unreadCount === 1 ? 'mensagem não lida' : 'mensagens não lidas'}. Abrir mensagens`
-    : 'Abrir mensagens';
+  const total = unreadMessageCount + unreadNotificationCount;
+  const parts = [];
+  if (unreadMessageCount) parts.push(pluralLabel(unreadMessageCount, 'mensagem não lida', 'mensagens não lidas'));
+  if (unreadNotificationCount) parts.push(pluralLabel(unreadNotificationCount, 'notificação nova', 'notificações novas'));
+  const label = parts.length ? `${parts.join(' e ')}. Abrir notificações` : 'Abrir notificações';
 
-  badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-  badge.classList.toggle('hidden', unreadCount === 0);
-  bell.classList.toggle('has-unread', unreadCount > 0);
+  badge.textContent = total > 99 ? '99+' : String(total);
+  badge.classList.toggle('hidden', total === 0);
+  bell.classList.toggle('has-unread', total > 0);
   bell.setAttribute('aria-label', label);
   bell.title = label;
 }
 
+function renderNotificationCount(count) {
+  unreadMessageCount = 0;
+  unreadNotificationCount = Math.max(0, Math.trunc(Number(count) || 0));
+  renderBell();
+}
+
 function renderConversationNotificationCount(conversations) {
-  const unreadCount = conversations.reduce(
+  unreadMessageCount = conversations.reduce(
     (total, conversation) => total + (Number(conversation.unreadCount) || 0),
     0
   );
-  renderNotificationCount(unreadCount);
+  renderBell();
 }
 
 async function refreshNotifications() {
@@ -256,20 +272,75 @@ async function refreshNotifications() {
   const userId = currentUserData.id;
   notificationRefreshInProgress = true;
   try {
-    const data = await api('/api/conversations');
+    const [conversationData, notificationData] = await Promise.all([
+      api('/api/conversations'),
+      api('/api/notifications')
+    ]);
     if (currentUserData?.id !== userId) return;
-    renderConversationNotificationCount(data.conversations);
+    unreadNotificationCount = notificationData.unreadCount;
+    renderConversationNotificationCount(conversationData.conversations);
     if (!document.getElementById('messages-view').classList.contains('hidden')) {
-      conversationContacts = data.conversations;
+      conversationContacts = conversationData.conversations;
       renderConversationList();
+    }
+    if (!document.getElementById('notifications-view').classList.contains('hidden') && notificationData.unreadCount) {
+      await loadNotifications();
     }
   } catch (error) {
     const bell = document.getElementById('notification-bell');
-    bell.setAttribute('aria-label', 'Não foi possível verificar mensagens não lidas');
-    bell.title = 'Não foi possível verificar mensagens não lidas';
-    console.error('Não foi possível atualizar as notificações de mensagens.', error);
+    bell.setAttribute('aria-label', 'Não foi possível verificar as notificações');
+    bell.title = 'Não foi possível verificar as notificações';
+    console.error('Não foi possível atualizar as notificações.', error);
   } finally {
     notificationRefreshInProgress = false;
+  }
+}
+
+function notificationText(item) {
+  const actor = `<strong>${escapeHTML(item.actor.name)}</strong>`;
+  const target = item.itemKind === 'post' ? 'sua publicação' : 'sua doação';
+  const label = item.itemLabel ? ` “${escapeHTML(item.itemLabel)}”` : '';
+  if (item.type === 'like') return `${actor} curtiu ${target}${label}.`;
+  if (item.type === 'comment') {
+    return `${actor} comentou em ${target}${label}${item.preview ? `: <span class="notification-preview">“${escapeHTML(item.preview)}”</span>` : '.'}`;
+  }
+  if (item.type === 'follow') return `${actor} começou a seguir você.`;
+  if (item.type === 'interest') return `${actor} tem interesse na sua doação${label}.`;
+  return `${actor} interagiu com você.`;
+}
+
+async function loadNotifications() {
+  try {
+    const data = await api('/api/notifications');
+    if (document.getElementById('notifications-view').classList.contains('hidden')) return;
+    const messages = document.getElementById('notifications-messages');
+    messages.innerHTML = unreadMessageCount
+      ? `<button class="notification-messages" type="button" data-view="messages">
+           <span>💬 Você tem ${pluralLabel(unreadMessageCount, 'mensagem não lida', 'mensagens não lidas')}</span>
+           <span class="notification-messages-action">Abrir</span>
+         </button>`
+      : '';
+    document.getElementById('notification-list').innerHTML = data.notifications.length
+      ? data.notifications.map(item => `
+          <li>
+            <button class="notification-item ${item.read ? '' : 'unread'}" type="button"
+              data-notification-type="${escapeHTML(item.type)}" data-notification-actor="${escapeHTML(item.actor.id)}">
+              ${avatarMarkup(item.actor.name, item.actor.avatarUrl, 'conversation-avatar')}
+              <span class="notification-body">
+                <span class="notification-text">${notificationText(item)}</span>
+                <time>${escapeHTML(timeLabel(item.createdAt))}</time>
+              </span>
+              ${item.read ? '' : '<span class="notification-dot" aria-hidden="true"></span><span class="visually-hidden">Nova</span>'}
+            </button>
+          </li>
+        `).join('')
+      : `<li class="empty-state">Nenhuma notificação por enquanto.<br>Quando alguém curtir, comentar, seguir você ou se interessar por uma doação, o aviso aparece aqui.</li>`;
+    // Marca como lidas, mantendo o destaque das novas enquanto a tela estiver aberta
+    if (data.unreadCount) await api('/api/notifications/read', { method: 'POST' });
+    unreadNotificationCount = 0;
+    renderBell();
+  } catch (error) {
+    showAlert(error.message, 'danger');
   }
 }
 
@@ -769,6 +840,15 @@ document.addEventListener('click', async event => {
     } catch (error) {
       showAlert(error.message, 'danger');
     }
+  }
+
+  // Cada aviso leva ao lugar onde a ação aconteceu
+  const notificationItem = event.target.closest('[data-notification-type]');
+  if (notificationItem) {
+    const type = notificationItem.dataset.notificationType;
+    if (type === 'follow') openProfile(notificationItem.dataset.notificationActor);
+    else if (type === 'interest') navigate('donations');
+    else openProfile(currentUserData.id);
   }
 
   const profileLink = event.target.closest('[data-profile]');

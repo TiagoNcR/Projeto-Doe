@@ -482,3 +482,24 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
   .donation-search-available .form-check-input { width: 22px; height: 22px; }
   .donation-search-available { min-height: 44px; }
 }
+
+/* Notificações */
+.notifications-panel { max-width: 620px; overflow: hidden; border: 1px solid var(--borda); border-radius: 18px; background: #fff; }
+.notification-messages { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border: 0; border-bottom: 1px solid var(--borda); background: var(--rosa-claro); color: var(--rosa-escuro); font-weight: 700; text-align: left; }
+.notification-messages-action { flex: 0 0 auto; text-decoration: underline; }
+.notification-list { margin: 0; padding: 0; list-style: none; }
+.notification-list li + li { border-top: 1px solid #f4e8ec; }
+.notification-list .empty-state { margin: 16px; }
+.notification-item { width: 100%; display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border: 0; background: #fff; color: var(--texto); text-align: left; }
+.notification-item.unread { background: #fff7fa; }
+.notification-item .conversation-avatar { margin-top: 2px; }
+.notification-body { min-width: 0; flex: 1; display: grid; gap: 4px; }
+.notification-text { line-height: 1.45; overflow-wrap: anywhere; }
+.notification-text strong { color: var(--rosa-escuro); }
+.notification-preview { color: #6d5c62; }
+.notification-body time { color: #938187; font-size: 0.75rem; }
+.notification-dot { width: 10px; height: 10px; flex: 0 0 auto; margin-top: 8px; border-radius: 50%; background: var(--rosa-escuro); }
+.notification-item:focus-visible, .notification-messages:focus-visible { outline: 3px solid var(--rosa-escuro); outline-offset: -3px; }
+@media (hover: hover) {
+  .notification-item:hover { background: var(--rosa-claro); }
+}

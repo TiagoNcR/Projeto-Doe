@@ -55,7 +55,7 @@
         <button class="logout-button hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta" title="Sair da conta">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4" /><path d="M10 17l5-5-5-5" /><path d="M15 12H3" /></svg>
         </button>
-        <button id="notification-bell" class="notification-bell hidden" type="button" data-view="messages" aria-label="Abrir mensagens" title="Abrir mensagens">
+        <button id="notification-bell" class="notification-bell hidden" type="button" data-view="notifications" aria-label="Abrir notificações" title="Abrir notificações">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
             <path d="M10 21h4" />
@@ -505,6 +505,20 @@
             </div>
             <div id="donation-list" class="donation-list"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- NOTIFICAÇÕES -->
+      <section id="notifications-view" class="hidden" aria-labelledby="notifications-title">
+        <div class="feed-heading">
+          <div>
+            <span class="eyebrow">ATIVIDADE</span>
+            <h1 id="notifications-title">Notificações</h1>
+          </div>
+        </div>
+        <div class="notifications-panel">
+          <div id="notifications-messages"></div>
+          <ul id="notification-list" class="notification-list"></ul>
         </div>
       </section>
 

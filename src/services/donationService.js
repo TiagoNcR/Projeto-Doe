@@ -4,6 +4,7 @@ const { HttpError } = require('../utils/errors');
 const { publicDonation } = require('../utils/serializers');
 const { validateRequiredDataImage } = require('../utils/images');
 const messageService = require('./messageService');
+const notificationService = require('./notificationService');
 
 const MAX_DONATION_IMAGE_BYTES = 5 * 1024 * 1024;
 const DONATION_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 5 MB.';
@@ -128,6 +129,14 @@ function expressInterest(user, id) {
     if (status === 'delivered') throw new HttpError(409, 'Esta doação já foi entregue.');
 
     donation.interests.push({ userId: user.id, createdAt: new Date().toISOString() });
+    notificationService.addNotification({
+      recipientId: donation.ownerId,
+      actorId: user.id,
+      type: 'interest',
+      itemId: donation.id,
+      itemKind: 'donation',
+      itemLabel: donation.name
+    });
     saveDatabase();
     messageService.sendMessage(user, donation.ownerId, {
       text: `Olá! Tenho interesse na sua doação "${donation.name}" (${donation.category}, tamanho ${donation.size}). Ela ainda está disponível?`
