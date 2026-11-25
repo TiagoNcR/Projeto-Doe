@@ -1,3 +1,4 @@
+const donationService = require('../services/donationService');
 const messageService = require('../services/messageService');
 const { requireUser } = require('../middleware/session');
 const { readJson, sendJson } = require('../utils/http');
@@ -18,4 +19,9 @@ async function send(req, res, contactId) {
   sendJson(res, 201, result);
 }
 
-module.exports = { conversations, messages, send };
+function donations(req, res, contactId) {
+  const user = requireUser(req, 'Faça login para acessar suas mensagens.');
+  sendJson(res, 200, donationService.donationsBetween(user, contactId));
+}
+
+module.exports = { conversations, donations, messages, send };

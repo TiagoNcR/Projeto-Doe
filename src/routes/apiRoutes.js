@@ -29,6 +29,11 @@ const routes = [
     handler: messageController.messages
   },
   {
+    method: 'GET',
+    pattern: /^\/api\/conversations\/([^/]+)\/donations$/,
+    handler: messageController.donations
+  },
+  {
     method: 'POST',
     pattern: /^\/api\/conversations\/([^/]+)\/messages$/,
     handler: messageController.send

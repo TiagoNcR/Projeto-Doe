@@ -196,7 +196,7 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .conversation-empty { padding: 12px 8px; font-size: 0.8125rem; }
 .chat-panel { min-width: 0; display: flex; }
 .chat-placeholder { flex: 1; display: grid; place-items: center; padding: 25px; color: #8a777d; text-align: center; }
-.active-chat { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+.active-chat { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; }
 .chat-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--borda); }
 .chat-header-text { min-width: 0; }
 .chat-header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -518,3 +518,19 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
 @media (pointer: coarse) {
   [data-close-profile-edit] { min-height: 44px; }
 }
+
+/* Faixa de doações dentro da conversa */
+.chat-donations { display: grid; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--borda); background: #fffafc; }
+.chat-donation { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.chat-donation-text { min-width: 0; font-size: 0.875rem; overflow-wrap: anywhere; }
+.chat-donation-text strong { color: var(--rosa-escuro); }
+.chat-donation-status { color: #6d5c62; }
+.chat-donation-action { padding: 6px 14px; font-size: 0.875rem; }
+@media (pointer: coarse) {
+  .chat-donation-action { min-height: 44px; }
+}
+/* Linhas fixas: com a faixa oculta, o histórico continua ocupando o espaço flexível */
+.active-chat > .chat-header { grid-row: 1; }
+.active-chat > .chat-donations { grid-row: 2; }
+.active-chat > .chat-history { grid-row: 3; }
+.active-chat > .chat-form { grid-row: 4; }

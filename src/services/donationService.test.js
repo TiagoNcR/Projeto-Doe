@@ -239,3 +239,27 @@ test('other interested people are told when the donation is reserved, delivered 
   assert.deepEqual(notificationsOf(other), ['delivered_other']);
   assert.deepEqual(notificationsOf(interested), ['delivered_other']);
 });
+
+test('a conversation shows the donations that connect both people, and only them', () => {
+  const coat = createDonation().id;
+  const shoes = donationService.createDonation(owner, { name: 'Tênis', category: 'Calçados', size: 'Único', image: validImage }).id;
+  donationService.createDonation(owner, { name: 'Sem interesse', image: validImage });
+  donationService.expressInterest(interested, coat);
+  donationService.expressInterest(interested, shoes);
+  donationService.expressInterest(other, shoes);
+  donationService.updateDonationStatus(owner, shoes, { status: 'reserved', reservedFor: other.id });
+
+  const asOwner = donationService.donationsBetween(owner, interested.id);
+  assert.deepEqual(asOwner.mine.map(item => [item.name, item.status, item.reservedForContact]), [
+    ['Tênis', 'reserved', false],
+    ['Casaco de lã', 'available', false]
+  ]);
+  assert.deepEqual(asOwner.theirs, []);
+  assert.equal(JSON.stringify(asOwner).includes(other.id), false, 'não revela quem mais demonstrou interesse');
+
+  const asInterested = donationService.donationsBetween(interested, owner.id);
+  assert.deepEqual(asInterested.mine, []);
+  assert.deepEqual(asInterested.theirs.map(item => [item.name, item.reservedForMe]), [['Tênis', false], ['Casaco de lã', false]]);
+  assert.equal(donationService.donationsBetween(other, owner.id).theirs[0].reservedForMe, true);
+  assert.throws(() => donationService.donationsBetween(owner, 'ninguem'), error => error.status === 404);
+});

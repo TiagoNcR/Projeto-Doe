@@ -188,6 +188,69 @@ function showConversationShell(userId) {
   if (history.dataset.conversationId !== userId) {
     history.innerHTML = '<p class="chat-empty">Carregando mensagens…</p>';
     delete history.dataset.conversationId;
+    // A faixa de doações é da conversa anterior; some até a nova carregar
+    const donations = document.getElementById('chat-donations');
+    donations.classList.add('hidden');
+    donations.innerHTML = '';
+  }
+}
+
+let chatDonationsRequestId = 0;
+
+// Faixa no topo da conversa com as doações que ligam as duas pessoas
+async function loadChatDonations(contactId) {
+  const requestId = ++chatDonationsRequestId;
+  const bar = document.getElementById('chat-donations');
+  try {
+    const data = await api(`/api/conversations/${encodeURIComponent(contactId)}/donations`);
+    if (requestId !== chatDonationsRequestId || contactId !== activeConversationId) return;
+    const contactName = conversationContacts.find(item => item.id === contactId)?.name || '';
+    const firstName = escapeHTML(contactName.split(' ')[0] || 'esta pessoa');
+    const row = (text, status, action = '') => `
+      <div class="chat-donation">
+        <span class="chat-donation-text">${text} · <span class="chat-donation-status">${status}</span></span>
+        ${action}
+      </div>`;
+    const mine = data.mine.map(item => {
+      const name = `<strong>${escapeHTML(item.name)}</strong>`;
+      const id = escapeHTML(item.id);
+      if (item.status === 'available') {
+        return row(`Interesse em ${name}`, 'Disponível',
+          `<button class="btn btn-doe chat-donation-action" type="button" data-chat-reserve="${id}">Reservar para ${firstName}</button>`);
+      }
+      if (item.status === 'reserved' && item.reservedForContact) {
+        return row(`Interesse em ${name}`, `Reservada para ${firstName}`,
+          `<button class="btn btn-outline-doe chat-donation-action" type="button" data-chat-deliver="${id}">Marcar como entregue</button>`);
+      }
+      if (item.status === 'reserved') return row(`Interesse em ${name}`, 'Reservada para outra pessoa');
+      return row(`Interesse em ${name}`, item.reservedForContact ? `Entregue para ${firstName}` : 'Entregue a outra pessoa');
+    });
+    const theirs = data.theirs.map(item => {
+      const status = item.status === 'available' ? 'Disponível'
+        : item.status === 'reserved' ? (item.reservedForMe ? 'Reservada para você' : 'Reservada para outra pessoa')
+          : (item.reservedForMe ? 'Entregue para você' : 'Entregue a outra pessoa');
+      return row(`Seu interesse em <strong>${escapeHTML(item.name)}</strong>`, status);
+    });
+    bar.innerHTML = [...mine, ...theirs].join('');
+    bar.classList.toggle('hidden', !mine.length && !theirs.length);
+  } catch {
+    // A faixa é um complemento da conversa; se falhar, apenas não aparece
+    if (requestId === chatDonationsRequestId) bar.classList.add('hidden');
+  }
+}
+
+async function updateDonationFromChat(button, body) {
+  button.disabled = true;
+  try {
+    await api(`/api/donations/${encodeURIComponent(button.dataset.chatReserve || button.dataset.chatDeliver)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    });
+    // A reserva gera uma mensagem automática para a pessoa, que aparece nesta conversa
+    await Promise.all([loadChatDonations(activeConversationId), loadConversationMessages(activeConversationId)]);
+  } catch (error) {
+    showAlert(error.message, 'danger');
+    button.disabled = false;
   }
 }
 
@@ -834,6 +897,7 @@ async function loadConversations(selectedId = activeConversationId, { autoSelect
     if (currentView === 'messages' && routeFor('messages') !== currentRoute()) updateHistory('replace');
     if (contact) {
       document.getElementById('chat-title').textContent = contact.name;
+      loadChatDonations(contact.id);
       await loadConversationMessages(contact.id);
     }
   } catch (error) {
@@ -907,6 +971,11 @@ document.addEventListener('click', async event => {
       await loadConversations(null);
     }
   }
+
+  const chatReserveButton = event.target.closest('[data-chat-reserve]');
+  if (chatReserveButton) await updateDonationFromChat(chatReserveButton, { status: 'reserved', reservedFor: activeConversationId });
+  const chatDeliverButton = event.target.closest('[data-chat-deliver]');
+  if (chatDeliverButton) await updateDonationFromChat(chatDeliverButton, { status: 'delivered' });
 
   const withdrawButton = event.target.closest('[data-withdraw-interest]');
   if (withdrawButton) {

@@ -248,6 +248,26 @@ function updateDonationStatus(user, id, body) {
   return donationForUser(donation, user);
 }
 
+// Doações que ligam duas pessoas numa conversa: as minhas em que o contato tem interesse
+// e as do contato em que eu tenho interesse (sem expor outros interessados).
+function donationsBetween(user, contactId) {
+  const database = getDatabase();
+  if (!database.users.some(item => item.id === contactId)) throw new HttpError(404, 'Participante não encontrado.');
+  const interestedIn = (donation, userId) =>
+    Array.isArray(donation.interests) && donation.interests.some(interest => interest.userId === userId);
+  const summary = donation => ({
+    id: donation.id,
+    name: donation.name,
+    status: DONATION_STATUSES.has(donation.status) ? donation.status : 'available'
+  });
+  return {
+    mine: database.donations.filter(item => item.ownerId === user.id && interestedIn(item, contactId))
+      .reverse().map(item => ({ ...summary(item), reservedForContact: item.reservedFor === contactId })),
+    theirs: database.donations.filter(item => item.ownerId === contactId && interestedIn(item, user.id))
+      .reverse().map(item => ({ ...summary(item), reservedForMe: item.reservedFor === user.id }))
+  };
+}
+
 function removeDonation(user, id) {
   const database = getDatabase();
   const donation = findDonation(id);
@@ -260,6 +280,7 @@ function removeDonation(user, id) {
 
 module.exports = {
   createDonation,
+  donationsBetween,
   expressInterest,
   listDonations,
   removeDonation,
