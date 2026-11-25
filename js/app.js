@@ -340,13 +340,15 @@ async function loadFeed() {
         <header class="post-header">
           <div class="post-author">
             ${avatarMarkup(item.ownerName, item.ownerAvatarUrl, 'post-avatar')}
-            <div><strong>${escapeHTML(item.ownerName)}</strong><small>${isDonation ? `${escapeHTML(item.category)} · ${escapeHTML(item.size)}` : 'Publicação da comunidade'}</small></div>
+            <div class="post-author-text"><strong>${escapeHTML(item.ownerName)}</strong><small><span class="post-kind">${isDonation ? `${escapeHTML(item.category)} · ${escapeHTML(item.size)}` : 'Publicação da comunidade'}</span><time>· ${escapeHTML(timeLabel(item.createdAt))}</time></small></div>
           </div>
           <div class="post-header-actions">
             ${item.ownerId !== currentUserData.id
-              ? `<button class="message-button" type="button" data-message-user="${escapeHTML(item.ownerId)}">Mensagem</button><button class="follow-button ${item.followingOwner ? 'following' : ''}" type="button" data-follow="${escapeHTML(item.ownerId)}">${item.followingOwner ? 'Seguindo' : 'Seguir'}</button>`
+              ? `<button class="message-button" type="button" data-message-user="${escapeHTML(item.ownerId)}" aria-label="Enviar mensagem para ${escapeHTML(item.ownerName)}" title="Mensagem">
+                  <svg class="message-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></svg>
+                  <span class="message-label">Mensagem</span>
+                </button><button class="follow-button ${item.followingOwner ? 'following' : ''}" type="button" data-follow="${escapeHTML(item.ownerId)}">${item.followingOwner ? 'Seguindo' : 'Seguir'}</button>`
               : '<span class="my-post-label">Sua publicação</span>'}
-            <small>${escapeHTML(timeLabel(item.createdAt))}</small>
           </div>
         </header>
         ${item.image
