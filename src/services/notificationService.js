@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { avatarUrl } = require('../utils/serializers');
+const blockService = require('./blockService');
 
 const MAX_NOTIFICATIONS_PER_USER = 100;
 const LIST_LIMIT = 30;
@@ -23,6 +24,7 @@ function sameEvent(notification, { recipientId, actorId, type, itemId = null }) 
 // Registra um aviso para recipientId. Quem chama é responsável por salvar o banco.
 function addNotification({ recipientId, actorId, type, itemId = null, itemKind = null, itemLabel = '', preview = '' }) {
   if (!recipientId || recipientId === actorId) return null;
+  if (blockService.isBlockedBetween(recipientId, actorId)) return null;
   const list = notifications();
   if (TOGGLE_TYPES.has(type)) {
     const existing = list.find(item => sameEvent(item, { recipientId, actorId, type, itemId }));
@@ -58,7 +60,8 @@ function removeNotification(event) {
 
 function listNotifications(user) {
   const users = getDatabase().users;
-  const mine = notifications().filter(item => item.userId === user.id);
+  const hidden = blockService.hiddenUserIds(user);
+  const mine = notifications().filter(item => item.userId === user.id && !hidden.has(item.actorId));
   const latest = mine.slice().reverse().slice(0, LIST_LIMIT).map(item => {
     const actor = users.find(entry => entry.id === item.actorId);
     return {

@@ -534,3 +534,14 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
 .active-chat > .chat-donations { grid-row: 2; }
 .active-chat > .chat-history { grid-row: 3; }
 .active-chat > .chat-form { grid-row: 4; }
+
+/* Bloqueio */
+.profile-secondary-actions { flex-basis: 100%; }
+.profile-secondary-actions .text-button { color: #8a3a4c; font-size: 0.875rem; font-weight: 600; }
+.blocked-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.blocked-person { display: flex; align-items: center; gap: 10px; }
+.blocked-person span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.blocked-person .btn { padding: 6px 14px; font-size: 0.875rem; }
+@media (pointer: coarse) {
+  .profile-secondary-actions .text-button, .blocked-person .btn { min-height: 44px; }
+}

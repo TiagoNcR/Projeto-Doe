@@ -2,10 +2,12 @@ const crypto = require('crypto');
 const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
 const { avatarUrl } = require('../utils/serializers');
+const blockService = require('./blockService');
 
-function getContact(userId) {
+function getContact(userId, user) {
   const contact = getDatabase().users.find(item => item.id === userId);
   if (!contact) throw new HttpError(404, 'Participante não encontrado.');
+  if (user) blockService.assertNotBlocked(user.id, contact.id, 'Não é possível conversar com este participante.');
   return contact;
 }
 
@@ -24,8 +26,9 @@ function unreadMessageCount(messages, userId) {
 
 function listConversations(user) {
   const database = getDatabase();
+  const hidden = blockService.hiddenUserIds(user);
   const conversations = database.users
-    .filter(contact => contact.id !== user.id)
+    .filter(contact => contact.id !== user.id && !hidden.has(contact.id))
     .map(contact => {
       const messages = database.messages.filter(message =>
         isConversationMessage(message, user.id, contact.id)
@@ -50,7 +53,7 @@ function listConversations(user) {
 }
 
 function listMessages(user, contactId) {
-  const contact = getContact(contactId);
+  const contact = getContact(contactId, user);
   if (contact.id === user.id) throw new HttpError(400, 'Não é possível abrir uma conversa consigo mesmo.');
 
   const database = getDatabase();
@@ -79,7 +82,7 @@ function listMessages(user, contactId) {
 }
 
 function sendMessage(user, contactId, body) {
-  const contact = getContact(contactId);
+  const contact = getContact(contactId, user);
   if (contact.id === user.id) throw new HttpError(400, 'Não é possível abrir uma conversa consigo mesmo.');
   const text = String(body.text || '').trim();
   if (!text || text.length > 1000) {

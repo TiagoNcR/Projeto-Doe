@@ -271,6 +271,24 @@ function openProfileEdit() {
   document.getElementById('password-form').reset();
   document.getElementById('profile-edit').classList.remove('hidden');
   document.getElementById('profile-edit-name').focus();
+  loadBlockedList();
+}
+
+async function loadBlockedList() {
+  const list = document.getElementById('blocked-list');
+  try {
+    const { blocked } = await api('/api/blocks');
+    list.innerHTML = blocked.length
+      ? blocked.map(person => `
+          <li class="blocked-person">
+            ${avatarMarkup(person.name, person.avatarUrl, 'conversation-avatar')}
+            <span>${escapeHTML(person.name)}</span>
+            <button class="btn btn-outline-doe" type="button" data-unblock data-person-id="${escapeHTML(person.id)}" data-person-name="${escapeHTML(person.name)}">Desbloquear</button>
+          </li>`).join('')
+      : '<li class="profile-edit-note">Você não bloqueou ninguém.</li>';
+  } catch (error) {
+    list.innerHTML = `<li class="profile-edit-note">${escapeHTML(error.message)}</li>`;
+  }
 }
 
 function closeProfileEdit() {
@@ -305,11 +323,22 @@ async function loadProfile() {
       countLabel(stats.delivered, 'entregue', 'entregues'),
       countLabel(stats.posts, 'publicação', 'publicações')
     ].join('');
+    const personAttrs = `data-person-id="${escapeHTML(profile.id)}" data-person-name="${escapeHTML(profile.name)}"`;
     document.getElementById('profile-actions').innerHTML = data.isMe
       ? `<button class="btn btn-doe" type="button" data-edit-profile aria-controls="profile-edit">Editar perfil</button>
          <button class="btn btn-outline-doe" type="button" data-change-avatar>Alterar foto</button>`
-      : `<button class="btn btn-outline-doe" type="button" data-message-user="${escapeHTML(profile.id)}" data-message-name="${escapeHTML(profile.name)}">Mensagem</button>
-         <button class="btn ${data.followingUser ? 'btn-outline-doe' : 'btn-doe'}" type="button" data-follow="${escapeHTML(profile.id)}">${data.followingUser ? 'Seguindo' : 'Seguir'}</button>`;
+      : data.blockedByMe
+        ? `<button class="btn btn-outline-doe" type="button" data-unblock ${personAttrs}>Desbloquear</button>`
+        : `<button class="btn btn-outline-doe" type="button" data-message-user="${escapeHTML(profile.id)}" data-message-name="${escapeHTML(profile.name)}">Mensagem</button>
+           <button class="btn ${data.followingUser ? 'btn-outline-doe' : 'btn-doe'}" type="button" data-follow="${escapeHTML(profile.id)}">${data.followingUser ? 'Seguindo' : 'Seguir'}</button>
+           <div class="profile-secondary-actions"><button class="text-button" type="button" data-block ${personAttrs}>Bloquear</button></div>`;
+    // Perfil bloqueado: sem números, filtros nem conteúdos, só o aviso e o botão de desbloquear
+    document.getElementById('profile-stats').classList.toggle('hidden', Boolean(data.blockedByMe));
+    document.querySelector('.profile-filters').classList.toggle('hidden', Boolean(data.blockedByMe));
+    if (data.blockedByMe) {
+      document.getElementById('profile-list').innerHTML = `<div class="empty-state">Você bloqueou ${escapeHTML(profile.name)}.<br>Desbloqueie para voltar a ver as publicações e trocar mensagens.</div>`;
+      return;
+    }
     renderProfileItems(data.isMe ? 'Você' : profile.name.split(' ')[0]);
   } catch (error) {
     showAlert(error.message, 'danger');
@@ -1080,6 +1109,33 @@ document.addEventListener('click', async event => {
   if (profileFilterButton) {
     profileFilter = profileFilterButton.dataset.profileFilter;
     renderProfileItems();
+  }
+
+  const blockButton = event.target.closest('[data-block]');
+  if (blockButton) {
+    const name = blockButton.dataset.personName;
+    if (window.confirm(`Bloquear ${name}? Vocês deixarão de ver as publicações e doações um do outro e não poderão trocar mensagens. A pessoa não será avisada.`)) {
+      try {
+        await api(`/api/users/${encodeURIComponent(blockButton.dataset.personId)}/block`, { method: 'POST' });
+        // Os avisos e mensagens da pessoa bloqueada saem do sino na hora
+        await Promise.all([loadProfile(), refreshNotifications()]);
+        showAlert(`Você bloqueou ${name}.`);
+      } catch (error) {
+        showAlert(error.message, 'danger');
+      }
+    }
+  }
+
+  const unblockButton = event.target.closest('[data-unblock]');
+  if (unblockButton) {
+    try {
+      await api(`/api/users/${encodeURIComponent(unblockButton.dataset.personId)}/block`, { method: 'DELETE' });
+      if (!document.getElementById('profile-edit').classList.contains('hidden')) await loadBlockedList();
+      if (profileUserId === unblockButton.dataset.personId) await loadProfile();
+      showAlert(`Você desbloqueou ${unblockButton.dataset.personName}.`);
+    } catch (error) {
+      showAlert(error.message, 'danger');
+    }
   }
 
   if (event.target.closest('[data-edit-profile]')) openProfileEdit();

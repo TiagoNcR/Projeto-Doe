@@ -5,6 +5,7 @@ const { publicDonation } = require('../utils/serializers');
 const { validateRequiredDataImage } = require('../utils/images');
 const messageService = require('./messageService');
 const notificationService = require('./notificationService');
+const blockService = require('./blockService');
 
 const MAX_DONATION_IMAGE_BYTES = 5 * 1024 * 1024;
 const DONATION_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 5 MB.';
@@ -82,7 +83,7 @@ function searchDonations(user, criteria = {}) {
     const words = normalizeText(`${item.name} ${item.description} ${item.category}`).split(/[^a-z0-9]+/).filter(Boolean);
     return terms.every(term => words.some(word => word.startsWith(term)));
   });
-  return { items: items.map(item => toFeedItem(item, user)) };
+  return { items: blockService.filterVisibleItems(user, items.map(item => toFeedItem(item, user))) };
 }
 
 function createDonation(user, body) {
@@ -120,6 +121,7 @@ function expressInterest(user, id) {
   if (donation.ownerId === user.id) {
     throw new HttpError(400, 'Você não pode demonstrar interesse na sua própria doação.');
   }
+  blockService.assertNotBlocked(user.id, donation.ownerId);
   if (!Array.isArray(donation.interests)) donation.interests = [];
 
   const alreadyInterested = donation.interests.some(interest => interest.userId === user.id);

@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
+const blockService = require('./blockService');
 const notificationService = require('./notificationService');
 
 function toggleFollow(user, targetId) {
@@ -8,6 +9,7 @@ function toggleFollow(user, targetId) {
   const target = database.users.find(item => item.id === targetId);
   if (!target) throw new HttpError(404, 'Participante não encontrado.');
   if (target.id === user.id) throw new HttpError(400, 'Você não pode seguir a si mesmo.');
+  blockService.assertNotBlocked(user.id, target.id);
 
   if (!Array.isArray(user.following)) user.following = [];
   const event = { recipientId: target.id, actorId: user.id, type: 'follow' };
@@ -41,6 +43,7 @@ function itemLabel(item, itemType) {
 function toggleLike(user, itemId, itemType = 'donation') {
   const database = getDatabase();
   const item = getSocialItem(database, itemType, itemId);
+  blockService.assertNotBlocked(user.id, item.ownerId);
   const event = { recipientId: item.ownerId, actorId: user.id, type: 'like', itemId: item.id };
 
   if (item.likes.includes(user.id)) {
@@ -58,6 +61,7 @@ function addComment(user, itemId, body, itemType = 'donation') {
   const text = String(body.text || '').trim().slice(0, 180);
   if (!text) throw new HttpError(400, 'Escreva um comentário.');
   const item = getSocialItem(getDatabase(), itemType, itemId);
+  blockService.assertNotBlocked(user.id, item.ownerId);
 
   item.comments.push({
     id: crypto.randomUUID(),
