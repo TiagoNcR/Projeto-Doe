@@ -180,3 +180,62 @@ test('search can show only available donations, keeping the feed shape', () => {
   assert.equal(available[0].kind, 'donation');
   assert.equal(available[0].interests, undefined);
 });
+
+const notificationsOf = user => (database.notifications || []).filter(item => item.userId === user.id).map(item => item.type);
+
+test('withdrawing interest removes it and the owner notification', () => {
+  const { id } = createDonation();
+  donationService.expressInterest(interested, id);
+  assert.deepEqual(notificationsOf(owner), ['interest']);
+
+  const result = donationService.withdrawInterest(interested, id);
+  assert.equal(result.withdrawn, true);
+  assert.equal(result.donation.interestedByMe, false);
+  assert.equal(database.donations[0].interests.length, 0);
+  assert.deepEqual(notificationsOf(owner), []);
+  assert.equal(donationService.withdrawInterest(interested, id).withdrawn, false);
+});
+
+test('withdrawing a reservation makes the donation available and notifies the owner and the others', () => {
+  const { id } = createDonation();
+  donationService.expressInterest(interested, id);
+  donationService.expressInterest(other, id);
+  donationService.updateDonationStatus(owner, id, { status: 'reserved', reservedFor: interested.id });
+
+  const result = donationService.withdrawInterest(interested, id);
+  assert.equal(result.donation.status, 'available');
+  assert.equal(database.donations[0].reservedFor, null);
+  assert.ok(notificationsOf(owner).includes('reservation_canceled'));
+  assert.deepEqual(notificationsOf(other), ['reserved_other', 'available_again']);
+  assert.deepEqual(notificationsOf(interested), []);
+});
+
+test('the recipient cannot withdraw after the donation was delivered', () => {
+  const { id } = createDonation();
+  donationService.expressInterest(interested, id);
+  donationService.updateDonationStatus(owner, id, { status: 'reserved', reservedFor: interested.id });
+  donationService.updateDonationStatus(owner, id, { status: 'delivered' });
+  assert.throws(() => donationService.withdrawInterest(interested, id), error => error.status === 409);
+});
+
+test('other interested people are told when the donation is reserved, delivered or available again', () => {
+  const reservedFirst = createDonation().id;
+  donationService.expressInterest(interested, reservedFirst);
+  donationService.expressInterest(other, reservedFirst);
+  donationService.updateDonationStatus(owner, reservedFirst, { status: 'reserved', reservedFor: interested.id });
+  donationService.updateDonationStatus(owner, reservedFirst, { status: 'delivered' });
+  assert.deepEqual(notificationsOf(other), ['reserved_other'], 'quem já soube da reserva não é avisado de novo na entrega');
+  assert.deepEqual(notificationsOf(interested), [], 'quem recebeu a reserva não recebe "reservada para outra pessoa"');
+
+  donationService.updateDonationStatus(owner, reservedFirst, { status: 'available' });
+  assert.deepEqual(notificationsOf(other), ['reserved_other', 'available_again']);
+  assert.deepEqual(notificationsOf(interested), ['available_again']);
+
+  database.notifications = [];
+  const deliveredDirectly = createDonation().id;
+  donationService.expressInterest(interested, deliveredDirectly);
+  donationService.expressInterest(other, deliveredDirectly);
+  donationService.updateDonationStatus(owner, deliveredDirectly, { status: 'delivered' });
+  assert.deepEqual(notificationsOf(other), ['delivered_other']);
+  assert.deepEqual(notificationsOf(interested), ['delivered_other']);
+});

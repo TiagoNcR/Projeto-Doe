@@ -150,6 +150,59 @@ function expressInterest(user, id) {
   };
 }
 
+// Avisa quem demonstrou interesse sobre uma mudança na doação (exceto excludeUserId).
+function notifyInterested(donation, type, excludeUserId = null) {
+  for (const interest of Array.isArray(donation.interests) ? donation.interests : []) {
+    if (interest.userId === excludeUserId) continue;
+    notificationService.addNotification({
+      recipientId: interest.userId,
+      actorId: donation.ownerId,
+      type,
+      itemId: donation.id,
+      itemKind: 'donation',
+      itemLabel: donation.name
+    });
+  }
+}
+
+function withdrawInterest(user, id) {
+  const donation = findDonation(id);
+  const interests = Array.isArray(donation.interests) ? donation.interests : [];
+  if (!interests.some(interest => interest.userId === user.id)) {
+    return { donation: donationForUser(donation, user), withdrawn: false };
+  }
+  const status = donation.status || 'available';
+  if (status === 'delivered' && donation.reservedFor === user.id) {
+    throw new HttpError(409, 'Esta doação já foi entregue para você.');
+  }
+
+  donation.interests = interests.filter(interest => interest.userId !== user.id);
+  notificationService.removeNotification({
+    recipientId: donation.ownerId,
+    actorId: user.id,
+    type: 'interest',
+    itemId: donation.id
+  });
+
+  // Desistir de uma reserva devolve a peça para quem ainda tem interesse
+  if (status === 'reserved' && donation.reservedFor === user.id) {
+    donation.status = 'available';
+    donation.reservedFor = null;
+    donation.statusUpdatedAt = new Date().toISOString();
+    notificationService.addNotification({
+      recipientId: donation.ownerId,
+      actorId: user.id,
+      type: 'reservation_canceled',
+      itemId: donation.id,
+      itemKind: 'donation',
+      itemLabel: donation.name
+    });
+    notifyInterested(donation, 'available_again');
+  }
+  saveDatabase();
+  return { donation: donationForUser(donation, user), withdrawn: true };
+}
+
 function updateDonationStatus(user, id, body) {
   const donation = findDonation(id);
   if (donation.ownerId !== user.id) {
@@ -159,6 +212,7 @@ function updateDonationStatus(user, id, body) {
   if (!DONATION_STATUSES.has(status)) throw new HttpError(400, 'Situação da doação inválida.');
 
   const interests = Array.isArray(donation.interests) ? donation.interests : [];
+  const previousStatus = donation.status || 'available';
   const previousReservedFor = donation.reservedFor || null;
   let reservedFor = previousReservedFor;
 
@@ -175,6 +229,15 @@ function updateDonationStatus(user, id, body) {
   donation.status = status;
   donation.reservedFor = reservedFor;
   donation.statusUpdatedAt = new Date().toISOString();
+
+  if (status === 'reserved' && reservedFor !== previousReservedFor) {
+    notifyInterested(donation, 'reserved_other', reservedFor);
+  } else if (status === 'delivered' && previousStatus === 'available') {
+    // Se a peça já estava reservada, os demais foram avisados na reserva
+    notifyInterested(donation, 'delivered_other', reservedFor);
+  } else if (status === 'available' && previousStatus !== 'available') {
+    notifyInterested(donation, 'available_again');
+  }
   saveDatabase();
 
   if (status === 'reserved' && reservedFor !== previousReservedFor) {
@@ -201,5 +264,6 @@ module.exports = {
   listDonations,
   removeDonation,
   searchDonations,
-  updateDonationStatus
+  updateDonationStatus,
+  withdrawInterest
 };

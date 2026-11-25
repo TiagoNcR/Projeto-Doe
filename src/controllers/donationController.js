@@ -37,6 +37,11 @@ function interest(req, res, donationId) {
   sendJson(res, 200, donationService.expressInterest(user, donationId));
 }
 
+function withdrawInterest(req, res, donationId) {
+  const user = requireUser(req, 'Faça login.');
+  sendJson(res, 200, donationService.withdrawInterest(user, donationId));
+}
+
 async function updateStatus(req, res, donationId) {
   const user = requireUser(req, 'Faça login.');
   const donation = donationService.updateDonationStatus(user, donationId, await readJson(req));
@@ -54,4 +59,4 @@ function search(req, res) {
   }));
 }
 
-module.exports = { comment, create, feed, interest, like, remove, search, updateStatus };
+module.exports = { comment, create, feed, interest, like, remove, search, updateStatus, withdrawInterest };

@@ -332,6 +332,10 @@ function notificationText(item) {
   }
   if (item.type === 'follow') return `${actor} começou a seguir você.`;
   if (item.type === 'interest') return `${actor} tem interesse na sua doação${label}.`;
+  if (item.type === 'reservation_canceled') return `${actor} desistiu da reserva da sua doação${label}. Ela voltou a ficar disponível.`;
+  if (item.type === 'reserved_other') return `A doação${label} de ${actor} foi reservada para outra pessoa.`;
+  if (item.type === 'delivered_other') return `A doação${label} de ${actor} foi entregue a outra pessoa.`;
+  if (item.type === 'available_again') return `A doação${label} de ${actor} está disponível de novo.`;
   return `${actor} interagiu com você.`;
 }
 
@@ -493,7 +497,9 @@ function donationInterestMarkup(item) {
       ? `<span class="donation-interest-note">${interestedPeopleLabel(item.interestCount)} · <button class="text-button" type="button" data-view="donations">Gerenciar</button></span>`
       : '';
   } else if (item.reservedForMe || item.interestedByMe) {
+    const canWithdraw = item.interestedByMe && !(item.status === 'delivered' && item.reservedForMe);
     action = `${item.interestedByMe && item.status === 'available' ? '<span class="donation-interest-note">Interesse enviado</span>' : ''}
+      ${canWithdraw ? `<button class="text-button donation-withdraw" type="button" data-withdraw-interest="${escapeHTML(item.id)}" data-donation-name="${escapeHTML(item.name)}" data-reserved-for-me="${item.reservedForMe && item.status === 'reserved' ? '1' : ''}">Desistir</button>` : ''}
       <button class="btn btn-outline-doe btn-interest" type="button" data-message-user="${escapeHTML(item.ownerId)}" data-message-name="${escapeHTML(item.ownerName)}">Abrir conversa</button>`;
   } else if (item.status === 'available') {
     action = `<button class="btn btn-doe btn-interest" type="button" data-interest="${escapeHTML(item.id)}">Tenho interesse</button>`;
@@ -812,6 +818,25 @@ document.addEventListener('click', async event => {
     await loadConversations(null);
   }
 
+  const withdrawButton = event.target.closest('[data-withdraw-interest]');
+  if (withdrawButton) {
+    const name = withdrawButton.dataset.donationName;
+    const question = withdrawButton.dataset.reservedForMe
+      ? `Desistir da reserva de “${name}”? A peça volta a ficar disponível para outras pessoas.`
+      : `Desistir do interesse em “${name}”?`;
+    if (window.confirm(question)) {
+      withdrawButton.disabled = true;
+      try {
+        await api(`/api/donations/${encodeURIComponent(withdrawButton.dataset.withdrawInterest)}/interest`, { method: 'DELETE' });
+        await refreshSocialItems();
+        showAlert(withdrawButton.dataset.reservedForMe ? 'Você desistiu da reserva. Quem está doando foi avisado.' : 'Você desistiu do interesse.');
+      } catch (error) {
+        showAlert(error.message, 'danger');
+        withdrawButton.disabled = false;
+      }
+    }
+  }
+
   const interestButton = event.target.closest('[data-interest]');
   if (interestButton) {
     interestButton.disabled = true;
@@ -876,6 +901,11 @@ document.addEventListener('click', async event => {
     } else if (type === 'interest') {
       // Abre a conversa com quem demonstrou interesse, que já começa com a mensagem citando a peça
       openConversation(notificationItem.dataset.notificationActor, notificationItem.dataset.notificationActorName);
+    } else if (type === 'reservation_canceled') {
+      navigate('donations');
+    } else if (['reserved_other', 'delivered_other', 'available_again'].includes(type)) {
+      // Perfil de quem doa, onde a peça aparece com a situação atualizada
+      openProfile(notificationItem.dataset.notificationActor);
     } else {
       openProfile(currentUserData.id);
     }

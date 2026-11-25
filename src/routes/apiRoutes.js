@@ -49,6 +49,11 @@ const routes = [
     handler: donationController.interest
   },
   {
+    method: 'DELETE',
+    pattern: /^\/api\/donations\/([^/]+)\/interest$/,
+    handler: donationController.withdrawInterest
+  },
+  {
     method: 'PATCH',
     pattern: /^\/api\/donations\/([^/]+)\/status$/,
     handler: donationController.updateStatus
