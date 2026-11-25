@@ -39,7 +39,8 @@ function showAlert(message, type = 'success') {
     ${escapeHTML(message)}
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
   </div>`;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
 }
 
 async function logoutUser() {
@@ -123,7 +124,7 @@ function initials(name) {
 
 function avatarMarkup(name, avatarUrl, className) {
   const content = avatarUrl
-    ? `<img src="${escapeHTML(avatarUrl)}" alt="">`
+    ? `<img src="${escapeHTML(avatarUrl)}" alt="" loading="lazy" decoding="async">`
     : escapeHTML(initials(name));
   return `<div class="${className}" role="img" aria-label="Foto de perfil de ${escapeHTML(name)}">${content}</div>`;
 }
@@ -352,7 +353,7 @@ async function loadFeed() {
           </div>
         </header>
         ${item.image
-          ? `<img class="post-image" src="${escapeHTML(item.image)}" alt="${escapeHTML(isDonation ? item.name : `Publicação de ${item.ownerName}`)}">`
+          ? `<img class="post-image" loading="lazy" decoding="async" src="${escapeHTML(item.image)}" alt="${escapeHTML(isDonation ? item.name : `Publicação de ${item.ownerName}`)}">`
           : isDonation ? `<div class="post-placeholder"><span>👕</span><strong>${escapeHTML(item.name)}</strong></div>` : ''}
         <div class="post-body">
           <div class="post-actions">
@@ -392,7 +393,7 @@ async function loadMyDonations() {
     }
     list.innerHTML = mine.map(item => `
       <article class="donation-item">
-        ${item.image ? `<img class="donation-thumb" src="${escapeHTML(item.image)}" alt="${escapeHTML(item.name)}">` : '<div class="donation-thumb-placeholder">👕</div>'}
+        ${item.image ? `<img class="donation-thumb" loading="lazy" decoding="async" src="${escapeHTML(item.image)}" alt="${escapeHTML(item.name)}">` : '<div class="donation-thumb-placeholder">👕</div>'}
         <div class="donation-details">
           <h3>${escapeHTML(item.name)}</h3>
           <p>${escapeHTML(item.category)} · Tamanho ${escapeHTML(item.size)} · ${escapeHTML(item.condition)}</p>
