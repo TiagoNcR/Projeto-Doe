@@ -51,16 +51,45 @@ async function logoutUser() {
     await api('/api/auth/logout', { method: 'POST' });
     currentUserData = null;
     profileUserId = null;
-    navigate('login');
+    activeConversationId = null;
+    navigate('login', { history: 'replace' });
     showAlert('Você saiu da sua conta.');
   } catch (error) {
     showAlert(error.message, 'danger');
   }
 }
 
-function navigate(view) {
+// Endereço de cada tela; a conversa aberta tem endereço próprio para o "voltar" levar à lista.
+let currentView = null;
+
+function routeFor(view) {
+  if (view === 'login') return '/';
+  if (view === 'profile') return `#profile/${encodeURIComponent(profileUserId)}`;
+  if (view === 'messages' && activeConversationId) return `#messages/${encodeURIComponent(activeConversationId)}`;
+  return `#${view}`;
+}
+
+function currentRoute() {
+  return location.hash || '/';
+}
+
+// mode: 'push' cria uma entrada no histórico, 'replace' atualiza a atual, 'none' (vindo do "voltar") não mexe
+function updateHistory(mode, state = {}) {
+  if (mode === 'none') return;
+  const url = routeFor(currentView);
+  if (mode === 'push' && url !== currentRoute()) history.pushState({ app: true, ...state }, '', url);
+  else history.replaceState({ ...(history.state || {}), app: true, ...state }, '', url);
+}
+
+// No computador lista e conversa aparecem lado a lado; no celular, uma de cada vez
+function chatShowsBothPanes() {
+  return window.matchMedia('(min-width: 37.5625em)').matches;
+}
+
+function navigate(view, { history: historyMode = 'push', historyState } = {}) {
   if (!views.includes(view)) return;
   if (['dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile', 'notifications'].includes(view) && !currentUserData) view = 'login';
+  currentView = view;
   if (view === 'profile' && !profileUserId) profileUserId = currentUserData.id;
   if (messageRefreshTimer) {
     clearInterval(messageRefreshTimer);
@@ -101,7 +130,7 @@ function navigate(view) {
   if (view === 'calendar') loadCalendarMonth();
   if (view === 'messages') {
     if (activeConversationId) showConversationShell(activeConversationId);
-    loadConversations(activeConversationId, { autoSelectUnread: true });
+    loadConversations(activeConversationId, { autoSelectUnread: chatShowsBothPanes() });
     messageRefreshTimer = setInterval(refreshChat, 4000);
   }
   if (view === 'donations') loadMyDonations();
@@ -111,8 +140,30 @@ function navigate(view) {
     loadProfile();
   }
   document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : view === 'notifications' ? 'Notificações' : 'Doações'}`;
-  history.replaceState(null, '', view === 'login' ? '/' : view === 'profile' ? `#profile/${encodeURIComponent(profileUserId)}` : `#${view}`);
+  updateHistory(historyMode, historyState);
 }
+
+// Mostra a tela correspondente a um endereço (ao abrir o site ou ao usar o "voltar"/"avançar")
+function applyRoute(hash, historyMode) {
+  const [name, rawParam] = hash.replace(/^#/, '').split('/');
+  const param = rawParam ? decodeURIComponent(rawParam) : '';
+  // Sem login, qualquer endereço vira a tela de login (ou cadastro), e o endereço é corrigido
+  if (!currentUserData) {
+    return navigate(name === 'register' ? 'register' : 'login', { history: historyMode === 'none' ? 'replace' : historyMode });
+  }
+  if (name === 'profile' && param) {
+    profileUserId = param;
+    return navigate('profile', { history: historyMode });
+  }
+  if (name === 'messages') {
+    activeConversationId = param || null;
+    pendingConversationName = '';
+    return navigate('messages', { history: historyMode });
+  }
+  return navigate(views.includes(name) && !['login', 'register'].includes(name) ? name : 'feed', { history: historyMode });
+}
+
+window.addEventListener('popstate', () => applyRoute(location.hash, 'none'));
 
 // Nome já conhecido de quem vai ter a conversa aberta, para o cabeçalho aparecer antes da resposta do servidor
 let pendingConversationName = '';
@@ -738,9 +789,15 @@ async function loadConversationMessages(contactId) {
   }
 }
 
+let conversationRequestId = 0;
+
 async function loadConversations(selectedId = activeConversationId, { autoSelectUnread = false } = {}) {
+  const requestId = ++conversationRequestId;
   try {
     const data = await api('/api/conversations');
+    // Uma busca mais nova já foi feita (ex.: a pessoa tocou numa conversa enquanto a lista atualizava);
+    // aplicar esta resposta antiga desfaria a escolha.
+    if (requestId !== conversationRequestId) return;
     conversationContacts = data.conversations;
     renderConversationNotificationCount(conversationContacts);
     activeConversationId = conversationContacts.some(contact => contact.id === selectedId)
@@ -755,6 +812,7 @@ async function loadConversations(selectedId = activeConversationId, { autoSelect
     document.getElementById('active-chat').classList.toggle('hidden', !contact);
     document.querySelector('.chat-layout').classList.toggle('has-active-chat', Boolean(contact));
     document.body.classList.toggle('chat-open', Boolean(contact));
+    if (currentView === 'messages' && routeFor('messages') !== currentRoute()) updateHistory('replace');
     if (contact) {
       document.getElementById('chat-title').textContent = contact.name;
       await loadConversationMessages(contact.id);
@@ -788,7 +846,8 @@ document.addEventListener('click', async event => {
 
   const viewButton = event.target.closest('[data-view]');
   if (viewButton) {
-    event.preventEvent?.();
+    // A aba Mensagens sempre abre a lista, não a última conversa aberta
+    if (viewButton.dataset.view === 'messages') activeConversationId = null;
     navigate(viewButton.dataset.view);
   }
 
@@ -809,13 +868,25 @@ document.addEventListener('click', async event => {
 
   const conversationButton = event.target.closest('[data-chat-user]');
   if (conversationButton) {
-    showConversationShell(conversationButton.dataset.chatUser);
-    await loadConversations(conversationButton.dataset.chatUser);
+    const contactId = conversationButton.dataset.chatUser;
+    // No celular a conversa substitui a lista: vira uma entrada no histórico para o "voltar" retornar à lista
+    if (activeConversationId !== contactId) {
+      activeConversationId = contactId;
+      if (chatShowsBothPanes()) updateHistory('replace');
+      else history.pushState({ app: true, conversationFromList: true }, '', routeFor('messages'));
+    }
+    showConversationShell(contactId);
+    await loadConversations(contactId);
   }
 
   if (event.target.closest('[data-chat-back]')) {
-    activeConversationId = null;
-    await loadConversations(null);
+    if (history.state?.conversationFromList) {
+      // Veio da lista: o mesmo que o "voltar" do celular
+      history.back();
+    } else {
+      activeConversationId = null;
+      await loadConversations(null);
+    }
   }
 
   const withdrawButton = event.target.closest('[data-withdraw-interest]');
@@ -1026,7 +1097,7 @@ document.getElementById('register-form').addEventListener('submit', async event 
     });
     currentUserData = data.user;
     event.target.reset();
-    navigate('feed');
+    navigate('feed', { history: 'replace' });
     showAlert('Conta criada! Bem-vindo ao Projeto Doe.');
   } catch (error) {
     showAlert(error.message, 'danger');
@@ -1046,7 +1117,7 @@ document.getElementById('login-form').addEventListener('submit', async event => 
     });
     currentUserData = data.user;
     event.target.reset();
-    navigate('feed');
+    navigate('feed', { history: 'replace' });
     showAlert('Login realizado com sucesso!');
   } catch (error) {
     showAlert(error.message, 'danger');
@@ -1197,13 +1268,7 @@ async function initialize() {
   } catch {
     currentUserData = null;
   }
-  const requestedView = location.hash.slice(1);
-  const profileMatch = requestedView.match(/^profile\/(.+)$/);
-  if (currentUserData && profileMatch) {
-    openProfile(decodeURIComponent(profileMatch[1]));
-    return;
-  }
-  navigate(currentUserData && views.includes(requestedView) ? requestedView : currentUserData ? 'feed' : 'login');
+  applyRoute(location.hash, 'replace');
 }
 
 initialize();
