@@ -15,7 +15,8 @@ test('uses a fresh database only when the file does not exist', () => {
       posts: [],
       sessions: [],
       messages: [],
-      notifications: []
+      notifications: [],
+      reports: []
     });
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });

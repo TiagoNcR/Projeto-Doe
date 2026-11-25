@@ -3,6 +3,7 @@ const donationController = require('../controllers/donationController');
 const messageController = require('../controllers/messageController');
 const notificationController = require('../controllers/notificationController');
 const postController = require('../controllers/postController');
+const reportController = require('../controllers/reportController');
 const socialController = require('../controllers/socialController');
 const { HttpError } = require('../utils/errors');
 const { sendJson } = require('../utils/http');
@@ -23,6 +24,7 @@ const routes = [
   { method: 'POST', pattern: /^\/api\/users\/([^/]+)\/block$/, handler: socialController.block },
   { method: 'DELETE', pattern: /^\/api\/users\/([^/]+)\/block$/, handler: socialController.unblock },
   { method: 'GET', pattern: /^\/api\/blocks$/, handler: socialController.listBlocked },
+  { method: 'POST', pattern: /^\/api\/reports$/, handler: reportController.create },
   { method: 'GET', pattern: /^\/api\/notifications$/, handler: notificationController.list },
   { method: 'POST', pattern: /^\/api\/notifications\/read$/, handler: notificationController.markAllAsRead },
   { method: 'GET', pattern: /^\/api\/conversations$/, handler: messageController.conversations },

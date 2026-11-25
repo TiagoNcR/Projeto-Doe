@@ -10,7 +10,8 @@ function defaultDatabase() {
     posts: [],
     sessions: [],
     messages: [],
-    notifications: []
+    notifications: [],
+    reports: []
   };
 }
 
@@ -41,7 +42,7 @@ function normalizeDatabase(database) {
     ? database
     : {};
 
-  for (const collection of ['users', 'donations', 'posts', 'sessions', 'messages', 'notifications']) {
+  for (const collection of ['users', 'donations', 'posts', 'sessions', 'messages', 'notifications', 'reports']) {
     if (!Array.isArray(normalized[collection])) normalized[collection] = [];
   }
 

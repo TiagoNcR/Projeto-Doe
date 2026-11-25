@@ -274,6 +274,68 @@ function openProfileEdit() {
   loadBlockedList();
 }
 
+// Alvo da denúncia aberta no momento
+let reportTarget = null;
+
+function openReportDialog(button) {
+  const { report: type, reportId, reportLabel, personId, personName } = button.dataset;
+  reportTarget = { type, id: reportId, personId, personName };
+  const subjects = {
+    user: `Perfil de ${personName}`,
+    post: `Publicação de ${personName}`,
+    donation: `Doação “${reportLabel}” de ${personName}`
+  };
+  const form = document.getElementById('report-form');
+  form.reset();
+  document.getElementById('report-subject').textContent = subjects[type] || personName;
+  document.getElementById('report-block-label').textContent = `Bloquear ${personName} também`;
+  updateReportDetailsRequirement();
+  document.getElementById('report-dialog').showModal();
+}
+
+// "Outro motivo" exige uma descrição
+function updateReportDetailsRequirement() {
+  const other = document.querySelector('input[name="report-reason"]:checked')?.value === 'outro';
+  document.getElementById('report-details').required = other;
+  document.getElementById('report-details-hint').textContent = other ? '(obrigatório)' : '(opcional)';
+}
+
+document.getElementById('report-form').addEventListener('change', event => {
+  if (event.target.name === 'report-reason') updateReportDetailsRequirement();
+});
+
+document.getElementById('report-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!reportTarget) return;
+  const target = reportTarget;
+  const alsoBlock = document.getElementById('report-block').checked;
+  try {
+    const result = await api('/api/reports', {
+      method: 'POST',
+      body: JSON.stringify({
+        targetType: target.type,
+        targetId: target.id,
+        reason: document.querySelector('input[name="report-reason"]:checked')?.value,
+        details: document.getElementById('report-details').value
+      })
+    });
+    if (alsoBlock) await api(`/api/users/${encodeURIComponent(target.personId)}/block`, { method: 'POST' });
+    document.getElementById('report-dialog').close();
+    if (alsoBlock) {
+      if (currentView === 'profile') await loadProfile();
+      else await refreshSocialItems();
+      refreshNotifications();
+    }
+    const message = result.alreadyReported
+      ? 'Você já tinha denunciado isso. A denúncia continua registrada.'
+      : 'Denúncia enviada. Obrigado por ajudar a manter a comunidade segura.';
+    showAlert(alsoBlock ? `${message} Você também bloqueou ${target.personName}.` : message);
+  } catch (error) {
+    showAlert(error.message, 'danger');
+    document.getElementById('report-dialog').close();
+  }
+});
+
 async function loadBlockedList() {
   const list = document.getElementById('blocked-list');
   try {
@@ -331,7 +393,10 @@ async function loadProfile() {
         ? `<button class="btn btn-outline-doe" type="button" data-unblock ${personAttrs}>Desbloquear</button>`
         : `<button class="btn btn-outline-doe" type="button" data-message-user="${escapeHTML(profile.id)}" data-message-name="${escapeHTML(profile.name)}">Mensagem</button>
            <button class="btn ${data.followingUser ? 'btn-outline-doe' : 'btn-doe'}" type="button" data-follow="${escapeHTML(profile.id)}">${data.followingUser ? 'Seguindo' : 'Seguir'}</button>
-           <div class="profile-secondary-actions"><button class="text-button" type="button" data-block ${personAttrs}>Bloquear</button></div>`;
+           <div class="profile-secondary-actions">
+             <button class="text-button" type="button" data-block ${personAttrs}>Bloquear</button>
+             <button class="text-button" type="button" data-report="user" data-report-id="${escapeHTML(profile.id)}" ${personAttrs}>Denunciar</button>
+           </div>`;
     // Perfil bloqueado: sem números, filtros nem conteúdos, só o aviso e o botão de desbloquear
     document.getElementById('profile-stats').classList.toggle('hidden', Boolean(data.blockedByMe));
     document.querySelector('.profile-filters').classList.toggle('hidden', Boolean(data.blockedByMe));
@@ -794,6 +859,10 @@ function renderFeedItem(item) {
           ${!isDonation && item.ownerId === currentUserData.id
             ? `<button class="delete-button mt-2" type="button" data-delete="${item.id}" data-kind="${collection}">Excluir publicação</button>`
             : ''}
+          ${item.ownerId !== currentUserData.id
+            ? `<button class="text-button report-button" type="button" data-report="${item.kind}" data-report-id="${escapeHTML(item.id)}"
+                 data-report-label="${escapeHTML(isDonation ? item.name : '')}" data-person-id="${escapeHTML(item.ownerId)}" data-person-name="${escapeHTML(item.ownerName)}">Denunciar</button>`
+            : ''}
         </div>
       </article>
     `;
@@ -1110,6 +1179,10 @@ document.addEventListener('click', async event => {
     profileFilter = profileFilterButton.dataset.profileFilter;
     renderProfileItems();
   }
+
+  const reportButton = event.target.closest('[data-report]');
+  if (reportButton) openReportDialog(reportButton);
+  if (event.target.closest('[data-close-report]')) document.getElementById('report-dialog').close();
 
   const blockButton = event.target.closest('[data-block]');
   if (blockButton) {
