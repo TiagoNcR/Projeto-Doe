@@ -27,9 +27,9 @@ function remove(req, res, postId) {
 }
 
 function events(req, res) {
-  requireUser(req, 'Faça login para consultar o calendário.');
+  const user = requireUser(req, 'Faça login para consultar o calendário.');
   const month = new URL(req.url, 'http://localhost').searchParams.get('month');
-  sendJson(res, 200, { events: postService.listEvents(month) });
+  sendJson(res, 200, { events: postService.listEvents(user, month) });
 }
 
 module.exports = { comment, create, events, like, remove };

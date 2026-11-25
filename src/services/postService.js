@@ -3,6 +3,7 @@ const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
 const { HttpError } = require('../utils/errors');
 const { publicPost } = require('../utils/serializers');
 const { validateOptionalDataImage } = require('../utils/images');
+const blockService = require('./blockService');
 
 const organizerRole = 'Instituição/Organizador';
 const MAX_POST_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -62,13 +63,14 @@ function createPost(user, body) {
   return publicPost(post);
 }
 
-function listEvents(month) {
+function listEvents(user, month) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month || ''))) {
     throw new HttpError(400, 'Informe o mês no formato AAAA-MM.');
   }
 
-  return getDatabase().posts
-    .filter(item => typeof item.eventDate === 'string' && item.eventDate.startsWith(`${month}-`))
+  const events = getDatabase().posts
+    .filter(item => typeof item.eventDate === 'string' && item.eventDate.startsWith(`${month}-`));
+  return blockService.filterVisibleItems(user, events)
     .sort((left, right) => left.eventDate.localeCompare(right.eventDate))
     .map(item => ({ ...publicPost(item), kind: 'post' }));
 }
