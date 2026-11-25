@@ -1,4 +1,4 @@
-const views = ['login', 'register', 'dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile', 'notifications'];
+const views = ['login', 'register', 'dashboard', 'feed', 'calendar', 'messages', 'donations', 'my-donations', 'profile', 'notifications'];
 const organizerRole = 'Instituição/Organizador';
 const alertArea = document.getElementById('alert-area');
 let currentUserData = null;
@@ -88,7 +88,7 @@ function chatShowsBothPanes() {
 
 function navigate(view, { history: historyMode = 'push', historyState } = {}) {
   if (!views.includes(view)) return;
-  if (['dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile', 'notifications'].includes(view) && !currentUserData) view = 'login';
+  if (['dashboard', 'feed', 'calendar', 'messages', 'donations', 'my-donations', 'profile', 'notifications'].includes(view) && !currentUserData) view = 'login';
   currentView = view;
   if (view === 'profile' && !profileUserId) profileUserId = currentUserData.id;
   if (messageRefreshTimer) {
@@ -133,14 +133,14 @@ function navigate(view, { history: historyMode = 'push', historyState } = {}) {
     loadConversations(activeConversationId, { autoSelectUnread: chatShowsBothPanes() });
     messageRefreshTimer = setInterval(refreshChat, 4000);
   }
-  if (view === 'donations') loadMyDonations();
+  if (view === 'my-donations') loadMyDonations();
   if (view === 'notifications') loadNotifications();
   if (view === 'profile') {
     profileFilter = 'all';
     closeProfileEdit();
     loadProfile();
   }
-  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : view === 'notifications' ? 'Notificações' : 'Doações'}`;
+  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : view === 'notifications' ? 'Notificações' : view === 'my-donations' ? 'Minhas doações' : 'Cadastrar doação'}`;
   updateHistory(historyMode, historyState);
 }
 
@@ -564,7 +564,7 @@ function donationInterestMarkup(item) {
   let action = '';
   if (item.ownerId === currentUserData.id) {
     action = item.interestCount
-      ? `<span class="donation-interest-note">${interestedPeopleLabel(item.interestCount)} · <button class="text-button" type="button" data-view="donations">Gerenciar</button></span>`
+      ? `<span class="donation-interest-note">${interestedPeopleLabel(item.interestCount)} · <button class="text-button" type="button" data-view="my-donations">Gerenciar</button></span>`
       : '';
   } else if (item.reservedForMe || item.interestedByMe) {
     const canWithdraw = item.interestedByMe && !(item.status === 'delivered' && item.reservedForMe);
@@ -713,7 +713,7 @@ async function loadMyDonations() {
     const data = await api('/api/feed');
     const mine = data.items.filter(item => item.kind === 'donation' && item.ownerId === currentUserData.id);
     if (!mine.length) {
-      list.innerHTML = '<div class="empty-state">Você ainda não cadastrou uma doação.</div>';
+      list.innerHTML = '<div class="empty-state">Você ainda não cadastrou uma doação.<br><button class="text-button" type="button" data-view="donations">Cadastrar a primeira peça</button></div>';
       return;
     }
     list.innerHTML = mine.map(item => {
@@ -992,7 +992,7 @@ document.addEventListener('click', async event => {
       // Abre a conversa com quem demonstrou interesse, que já começa com a mensagem citando a peça
       openConversation(notificationItem.dataset.notificationActor, notificationItem.dataset.notificationActorName);
     } else if (type === 'reservation_canceled') {
-      navigate('donations');
+      navigate('my-donations');
     } else if (['reserved_other', 'delivered_other', 'available_again'].includes(type)) {
       // Perfil de quem doa, onde a peça aparece com a situação atualizada
       openProfile(notificationItem.dataset.notificationActor);
@@ -1317,8 +1317,8 @@ document.getElementById('donation-form').addEventListener('submit', async event 
     event.target.reset();
     document.getElementById('image-preview').classList.add('hidden');
     document.getElementById('image-preview').innerHTML = '';
-    await loadMyDonations();
-    await updateDashboard();
+    // Leva para "Minhas doações", onde a peça recém-cadastrada aparece no topo
+    navigate('my-donations');
     showAlert('Doação publicada no feed com sucesso!');
   } catch (error) {
     showAlert(error.message, 'danger');

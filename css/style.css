@@ -74,7 +74,7 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .action-card small { color: #88777d; margin-top: 7px; line-height: 1.5; }
 .info-banner { margin-top: 25px; background: var(--rosa-claro); padding: 20px 24px; border-radius: 15px; }
 .info-banner p { margin: 6px 0 0; }
-.donations-layout { display: grid; grid-template-columns: minmax(280px, .8fr) 1.2fr; gap: 25px; align-items: start; }
+.donation-form-wrapper { max-width: 640px; }
 .donation-form-card { padding: 25px; }
 .list-panel { background: #fff; border: 1px solid var(--borda); border-radius: 20px; padding: 25px; min-height: 250px; }
 .donation-list { display: grid; gap: 12px; }
@@ -389,9 +389,6 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
   .feed-layout, .calendar-layout { grid-template-columns: minmax(0, 1fr); }
   /* Em uma coluna o calendário ficaria abaixo de todas as publicações; a aba Calendário já cobre esse uso */
   .feed-calendar-panel { display: none; }
-}
-@container (max-width: 40em) {
-  .donations-layout { grid-template-columns: minmax(0, 1fr); }
 }
 /* Cards de números: sempre 3 colunas; com pouco espaço o ícone vai para cima do texto */
 @container (max-width: 40em) {

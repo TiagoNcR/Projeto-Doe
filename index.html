@@ -243,7 +243,7 @@
             ><strong>Cadastrar uma roupa</strong
             ><small>Informe os detalhes de uma peça que deseja doar.</small>
           </button>
-          <button class="action-card" type="button" data-view="donations">
+          <button class="action-card" type="button" data-view="my-donations">
             <span class="action-icon">👚</span
             ><strong>Ver roupas cadastradas</strong
             ><small>Consulte e gerencie suas doações.</small>
@@ -418,21 +418,15 @@
       <section id="donations-view" class="hidden">
         <div class="dashboard-top">
           <div>
-            <span class="eyebrow">GESTÃO DE DOAÇÕES</span>
-            <h1>Roupas para doar</h1>
-            <p class="muted">Cadastre peças e acompanhe os registros.</p>
+            <span class="eyebrow">NOVA DOAÇÃO</span>
+            <h1>Cadastrar roupa</h1>
+            <p class="muted">Preencha os dados da peça. Ela aparece no feed assim que for salva.</p>
           </div>
-          <button
-            class="btn btn-outline-doe"
-            type="button"
-            data-view="dashboard"
-          >
-            Voltar ao painel
-          </button>
+          <button class="btn btn-outline-doe" type="button" data-view="my-donations">Minhas doações</button>
         </div>
-        <div class="donations-layout">
+        <div class="donation-form-wrapper">
           <div class="auth-card donation-form-card">
-            <h2>Cadastrar roupa</h2>
+            <h2>Dados da peça</h2>
             <form id="donation-form">
               <label for="item-name" class="form-label">Nome da peça</label>
               <input
@@ -496,15 +490,21 @@
               </button>
             </form>
           </div>
-          <div class="list-panel">
-            <div class="section-heading">
-              <div>
-                <h2>Doações cadastradas</h2>
-                <p class="muted">Peças registradas na sua conta.</p>
-              </div>
-            </div>
-            <div id="donation-list" class="donation-list"></div>
+        </div>
+      </section>
+
+      <!-- MINHAS DOAÇÕES -->
+      <section id="my-donations-view" class="hidden">
+        <div class="dashboard-top">
+          <div>
+            <span class="eyebrow">GESTÃO DE DOAÇÕES</span>
+            <h1>Minhas doações</h1>
+            <p class="muted">Acompanhe interessados, reservas e entregas das peças que você cadastrou.</p>
           </div>
+          <button class="btn btn-doe" type="button" data-view="donations">Cadastrar nova doação</button>
+        </div>
+        <div class="list-panel">
+          <div id="donation-list" class="donation-list"></div>
         </div>
       </section>
 
