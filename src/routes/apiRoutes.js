@@ -38,6 +38,16 @@ const routes = [
     pattern: /^\/api\/donations\/([^/]+)\/comments$/,
     handler: donationController.comment
   },
+  {
+    method: 'POST',
+    pattern: /^\/api\/donations\/([^/]+)\/interest$/,
+    handler: donationController.interest
+  },
+  {
+    method: 'PATCH',
+    pattern: /^\/api\/donations\/([^/]+)\/status$/,
+    handler: donationController.updateStatus
+  },
   { method: 'DELETE', pattern: /^\/api\/donations\/([^/]+)$/, handler: donationController.remove }
 ];
 

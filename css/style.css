@@ -415,3 +415,37 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
   .btn-doe:hover, .action-card:hover { transform: none; }
 }
+
+/* Situação das doações e interesse */
+.donation-status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8125rem; font-weight: 700; line-height: 1.5; vertical-align: middle; white-space: nowrap; }
+.status-available { background: #e6f4ea; color: #2b6340; }
+.status-reserved { background: #fff1d6; color: #7d5100; }
+.status-delivered { background: #eee8ea; color: #5f5056; }
+.donation-interest { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.donation-interest-action { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.btn-interest { padding: 8px 18px; }
+.donation-interest-note { margin: 0; color: #88777d; font-size: 0.8125rem; }
+.donation-item h3 .donation-status { margin-left: 6px; font-size: 0.75rem; }
+.donation-manage { display: grid; gap: 8px; max-width: 340px; margin-top: 12px; }
+.donation-manage .form-label { margin: 0; }
+.interest-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.interest-chip { padding: 4px 12px; border: 1px solid var(--rosa); border-radius: 16px; background: #fff; color: var(--rosa-escuro); font-size: 0.8125rem; font-weight: 700; }
+@media (hover: hover) {
+  .interest-chip:hover { background: var(--rosa-claro); }
+}
+@media (pointer: coarse) {
+  .interest-chip, .btn-interest { min-height: 44px; }
+}
+/* Lista "Minhas doações": adapta-se à própria largura (no layout de duas colunas ela também fica estreita) */
+.list-panel { container: donation-list / inline-size; }
+@container donation-list (max-width: 32em) {
+  .donation-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "thumb . delete" "details details details"; align-items: start; gap: 12px; }
+  .donation-thumb, .donation-thumb-placeholder { grid-area: thumb; width: 72px; height: 72px; }
+  .donation-thumb-placeholder { font-size: 2rem; }
+  .donation-details { grid-area: details; min-width: 0; }
+  .donation-item .delete-button { grid-area: delete; }
+  .donation-manage { max-width: none; }
+}
+@container donation-list (max-width: 24em) {
+  .donation-item { padding: 12px; }
+}

@@ -32,4 +32,15 @@ function remove(req, res, donationId) {
   sendJson(res, 200, { ok: true });
 }
 
-module.exports = { comment, create, feed, like, remove };
+function interest(req, res, donationId) {
+  const user = requireUser(req, 'Faça login para demonstrar interesse.');
+  sendJson(res, 200, donationService.expressInterest(user, donationId));
+}
+
+async function updateStatus(req, res, donationId) {
+  const user = requireUser(req, 'Faça login.');
+  const donation = donationService.updateDonationStatus(user, donationId, await readJson(req));
+  sendJson(res, 200, { donation });
+}
+
+module.exports = { comment, create, feed, interest, like, remove, updateStatus };

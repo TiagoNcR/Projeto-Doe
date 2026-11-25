@@ -53,6 +53,12 @@ function normalizeDatabase(database) {
     if (!Array.isArray(item.comments)) item.comments = [];
   }
 
+  for (const donation of normalized.donations) {
+    if (!['available', 'reserved', 'delivered'].includes(donation.status)) donation.status = 'available';
+    if (!Array.isArray(donation.interests)) donation.interests = [];
+    if (typeof donation.reservedFor !== 'string') donation.reservedFor = null;
+  }
+
   for (const message of normalized.messages) {
     if (!Array.isArray(message.readBy)) {
       message.readBy = typeof message.senderId === 'string' ? [message.senderId] : [];

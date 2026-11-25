@@ -111,7 +111,7 @@ async function updateDashboard() {
     const data = await api('/api/feed');
     const mine = data.items.filter(item => item.kind === 'donation' && item.ownerId === currentUserData.id);
     document.getElementById('stat-total').textContent = mine.length;
-    document.getElementById('stat-available').textContent = mine.length;
+    document.getElementById('stat-available').textContent = mine.filter(item => item.status === 'available').length;
   } catch {
     document.getElementById('stat-total').textContent = '0';
     document.getElementById('stat-available').textContent = '0';
@@ -302,6 +302,33 @@ async function loadCalendarMonth() {
   }
 }
 
+const donationStatusLabels = { available: 'Disponível', reserved: 'Reservada', delivered: 'Entregue' };
+
+function donationStatusBadge(item) {
+  const status = donationStatusLabels[item.status] ? item.status : 'available';
+  const label = status === 'reserved' && item.reservedForMe ? 'Reservada para você' : donationStatusLabels[status];
+  return `<span class="donation-status status-${status}">${label}</span>`;
+}
+
+function interestedPeopleLabel(count) {
+  return `${count} ${count === 1 ? 'pessoa interessada' : 'pessoas interessadas'}`;
+}
+
+function donationInterestMarkup(item) {
+  let action = '';
+  if (item.ownerId === currentUserData.id) {
+    action = item.interestCount
+      ? `<span class="donation-interest-note">${interestedPeopleLabel(item.interestCount)} · <button class="text-button" type="button" data-view="donations">Gerenciar</button></span>`
+      : '';
+  } else if (item.reservedForMe || item.interestedByMe) {
+    action = `${item.interestedByMe && item.status === 'available' ? '<span class="donation-interest-note">Interesse enviado</span>' : ''}
+      <button class="btn btn-outline-doe btn-interest" type="button" data-message-user="${escapeHTML(item.ownerId)}">Abrir conversa</button>`;
+  } else if (item.status === 'available') {
+    action = `<button class="btn btn-doe btn-interest" type="button" data-interest="${escapeHTML(item.id)}">Tenho interesse</button>`;
+  }
+  return `<div class="donation-interest">${donationStatusBadge(item)}<div class="donation-interest-action">${action}</div></div>`;
+}
+
 async function loadFeed() {
   try {
     const data = await api(`/api/feed?filter=${feedFilter}`);
@@ -332,7 +359,8 @@ async function loadFeed() {
       const publicationText = isDonation
         ? `<p class="post-caption"><strong>${escapeHTML(item.ownerName)}</strong> está doando ${escapeHTML(item.name)}.</p>
            <p class="post-details">Tamanho ${escapeHTML(item.size)} · Condição: ${escapeHTML(item.condition)}</p>
-           ${item.description ? `<p class="post-description">${escapeHTML(item.description)}</p>` : ''}`
+           ${item.description ? `<p class="post-description">${escapeHTML(item.description)}</p>` : ''}
+           ${donationInterestMarkup(item)}`
         : `<p class="post-caption"><strong>${escapeHTML(item.ownerName)}</strong></p>
            ${item.eventDate ? `<p class="post-event-date"><strong>Atividade:</strong> ${escapeHTML(formatEventDate(item.eventDate))}</p>` : ''}
            <p class="post-text">${escapeHTML(item.text)}</p>`;
@@ -391,18 +419,38 @@ async function loadMyDonations() {
       list.innerHTML = '<div class="empty-state">Você ainda não cadastrou uma doação.</div>';
       return;
     }
-    list.innerHTML = mine.map(item => `
+    list.innerHTML = mine.map(item => {
+      const interests = item.interests || [];
+      const reservedName = interests.find(person => person.userId === item.reservedFor)?.name;
+      const selectedValue = item.status === 'reserved' ? `reserved:${item.reservedFor}` : item.status;
+      const options = [
+        { value: 'available', label: 'Disponível' },
+        ...interests.map(person => ({ value: `reserved:${person.userId}`, label: `Reservada para ${person.name}` })),
+        { value: 'delivered', label: reservedName ? `Entregue para ${reservedName}` : 'Entregue' }
+      ];
+      return `
       <article class="donation-item">
         ${item.image ? `<img class="donation-thumb" loading="lazy" decoding="async" src="${escapeHTML(item.image)}" alt="${escapeHTML(item.name)}">` : '<div class="donation-thumb-placeholder">👕</div>'}
         <div class="donation-details">
-          <h3>${escapeHTML(item.name)}</h3>
+          <h3>${escapeHTML(item.name)} ${donationStatusBadge(item)}</h3>
           <p>${escapeHTML(item.category)} · Tamanho ${escapeHTML(item.size)} · ${escapeHTML(item.condition)}</p>
           ${item.description ? `<p>${escapeHTML(item.description)}</p>` : ''}
           <small>${item.likes.length} curtida(s) · ${item.comments.length} comentário(s)</small>
+          <div class="donation-manage">
+            <label class="form-label" for="donation-status-${escapeHTML(item.id)}">Situação</label>
+            <select id="donation-status-${escapeHTML(item.id)}" class="form-select" data-donation-status="${escapeHTML(item.id)}">
+              ${options.map(option => `<option value="${escapeHTML(option.value)}" ${option.value === selectedValue ? 'selected' : ''}>${escapeHTML(option.label)}</option>`).join('')}
+            </select>
+            ${interests.length
+              ? `<p class="donation-interest-note">${interestedPeopleLabel(interests.length)}. Toque para conversar:</p>
+                 <div class="interest-chips">${interests.map(person => `<button class="interest-chip" type="button" data-message-user="${escapeHTML(person.userId)}">${escapeHTML(person.name)}</button>`).join('')}</div>`
+              : '<p class="donation-interest-note">Ninguém demonstrou interesse ainda. Para reservar, a pessoa precisa tocar em “Tenho interesse” no feed.</p>'}
+          </div>
         </div>
         <button class="delete-button" type="button" data-delete="${item.id}" data-kind="donations">Excluir</button>
       </article>
-    `).join('');
+    `;
+    }).join('');
   } catch (error) {
     showAlert(error.message, 'danger');
   }
@@ -541,6 +589,20 @@ document.addEventListener('click', async event => {
   if (event.target.closest('[data-chat-back]')) {
     activeConversationId = null;
     await loadConversations(null);
+  }
+
+  const interestButton = event.target.closest('[data-interest]');
+  if (interestButton) {
+    interestButton.disabled = true;
+    try {
+      const data = await api(`/api/donations/${encodeURIComponent(interestButton.dataset.interest)}/interest`, { method: 'POST' });
+      activeConversationId = data.contactId;
+      navigate('messages');
+      if (!data.alreadyInterested) showAlert('Interesse enviado! Continue a conversa com quem está doando.');
+    } catch (error) {
+      showAlert(error.message, 'danger');
+      await loadFeed();
+    }
   }
 
   const deleteButton = event.target.closest('[data-delete]');
@@ -741,6 +803,25 @@ function readImage(file) {
 
 document.getElementById('profile-avatar-button').addEventListener('click', () => {
   document.getElementById('profile-avatar-input').click();
+});
+
+document.addEventListener('change', async event => {
+  const statusSelect = event.target.closest('[data-donation-status]');
+  if (!statusSelect) return;
+  const [status, reservedFor] = statusSelect.value.split(':');
+  statusSelect.disabled = true;
+  try {
+    await api(`/api/donations/${encodeURIComponent(statusSelect.dataset.donationStatus)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reservedFor })
+    });
+    showAlert(status === 'reserved'
+      ? 'Doação reservada. Combine a entrega pelas mensagens.'
+      : 'Situação da doação atualizada.');
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  }
+  await loadMyDonations();
 });
 
 document.getElementById('profile-avatar-input').addEventListener('change', async event => {
