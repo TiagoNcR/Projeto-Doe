@@ -193,8 +193,13 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .conversation-empty { padding: 12px 8px; font-size: 13px; }
 .chat-panel { min-width: 0; display: flex; }
 .chat-placeholder { flex: 1; display: grid; place-items: center; padding: 25px; color: #8a777d; text-align: center; }
-.active-chat { width: 100%; min-width: 0; display: grid; grid-template-rows: auto 1fr auto; }
-.chat-header { padding: 16px 20px; border-bottom: 1px solid var(--borda); }
+.active-chat { width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+.chat-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--borda); }
+.chat-header-text { min-width: 0; }
+.chat-header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-back { display: none; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--rosa-escuro); }
+.chat-back:hover, .chat-back:focus-visible { background: var(--rosa-claro); }
+.chat-back svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .chat-header strong, .chat-header small { display: block; }
 .chat-header strong { color: var(--rosa-escuro); }
 .chat-header small { margin-top: 4px; color: #938187; font-size: 12px; }
@@ -288,9 +293,24 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
   .post-header-actions { gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
   .post-header-actions > small { white-space: nowrap; }
   .message-button, .follow-button { padding: 5px 8px; font-size: 11px; }
-  .chat-layout { grid-template-columns: 1fr; }
-  .chat-sidebar { max-height: 240px; overflow-y: auto; border-right: 0; border-bottom: 1px solid var(--borda); }
-  .chat-panel, .active-chat { min-height: 460px; }
+  /* Chat: mostra a lista OU a conversa, uma de cada vez */
+  .chat-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; }
+  .chat-sidebar { border-right: 0; }
+  .chat-layout:not(.has-active-chat) .chat-panel { display: none; }
+  .chat-layout.has-active-chat .chat-sidebar { display: none; }
+  .chat-header { padding: 8px 12px 8px 6px; }
+  .chat-back { display: grid; }
+  .chat-history { max-height: none; padding: 12px; }
+  .chat-form { padding: 8px; }
+  .chat-form input { font-size: 16px; }
+  .chat-form button { min-height: 44px; }
+  /* Conversa aberta: ocupa a tela, sem abas nem rodapé do site */
+  body.chat-open #messages-view .feed-heading,
+  body.chat-open .header-actions,
+  body.chat-open .site-footer { display: none; }
+  body.chat-open .page-shell { padding-bottom: 0; }
+  body.chat-open .app-container { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  body.chat-open .chat-layout { height: calc(100vh - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); height: calc(100dvh - 76px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); min-height: 300px; }
 }
 @media (max-width: 360px) {
   .navbar-brand { font-size: 21px; }

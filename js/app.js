@@ -64,6 +64,7 @@ function navigate(view) {
     clearInterval(notificationRefreshTimer);
     notificationRefreshTimer = null;
   }
+  document.body.classList.remove('chat-open');
   views.forEach(name => {
     document.getElementById(`${name}-view`).classList.toggle('hidden', name !== view);
   });
@@ -93,7 +94,7 @@ function navigate(view) {
   }
   if (view === 'calendar') loadCalendarMonth();
   if (view === 'messages') {
-    loadConversations(activeConversationId);
+    loadConversations(activeConversationId, { autoSelectUnread: true });
     messageRefreshTimer = setInterval(refreshChat, 4000);
   }
   if (view === 'donations') loadMyDonations();
@@ -459,21 +460,23 @@ async function loadConversationMessages(contactId) {
   }
 }
 
-async function loadConversations(selectedId = activeConversationId) {
+async function loadConversations(selectedId = activeConversationId, { autoSelectUnread = false } = {}) {
   try {
     const data = await api('/api/conversations');
     conversationContacts = data.conversations;
     renderConversationNotificationCount(conversationContacts);
     activeConversationId = conversationContacts.some(contact => contact.id === selectedId)
       ? selectedId
-      : selectedId
-        ? null
-        : conversationContacts.find(contact => contact.unreadCount > 0)?.id || null;
+      : !selectedId && autoSelectUnread
+        ? conversationContacts.find(contact => contact.unreadCount > 0)?.id || null
+        : null;
     renderConversationList();
 
     const contact = conversationContacts.find(item => item.id === activeConversationId);
     document.getElementById('chat-placeholder').classList.toggle('hidden', Boolean(contact));
     document.getElementById('active-chat').classList.toggle('hidden', !contact);
+    document.querySelector('.chat-layout').classList.toggle('has-active-chat', Boolean(contact));
+    document.body.classList.toggle('chat-open', Boolean(contact));
     if (contact) {
       document.getElementById('chat-title').textContent = contact.name;
       await loadConversationMessages(contact.id);
@@ -530,6 +533,11 @@ document.addEventListener('click', async event => {
   const conversationButton = event.target.closest('[data-chat-user]');
   if (conversationButton) {
     await loadConversations(conversationButton.dataset.chatUser);
+  }
+
+  if (event.target.closest('[data-chat-back]')) {
+    activeConversationId = null;
+    await loadConversations(null);
   }
 
   const deleteButton = event.target.closest('[data-delete]');

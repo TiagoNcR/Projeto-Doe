@@ -372,8 +372,13 @@
             </div>
             <div id="active-chat" class="active-chat hidden">
               <header class="chat-header">
-                <strong id="chat-title">Conversa</strong>
-                <small>Mensagens privadas</small>
+                <button class="chat-back" type="button" data-chat-back aria-label="Voltar para a lista de conversas" title="Voltar">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6" /></svg>
+                </button>
+                <div class="chat-header-text">
+                  <strong id="chat-title">Conversa</strong>
+                  <small>Mensagens privadas</small>
+                </div>
               </header>
               <div id="chat-history" class="chat-history" aria-live="polite"></div>
               <form id="chat-form" class="chat-form">
