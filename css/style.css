@@ -297,3 +297,32 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
   .header-actions .header-link { font-size: 10px; }
   .sidebar-user-controls { gap: 6px; }
 }
+
+/* Visitante (login e cadastro): a aside vira um cabeçalho horizontal no topo */
+.guest-actions { display: none; }
+body:not(.is-authenticated) .site-sidebar { position: sticky; inset: 0 0 auto; width: 100%; height: auto; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; padding: calc(14px + env(safe-area-inset-top, 0px)) max(32px, env(safe-area-inset-right, 0px)) 14px max(32px, env(safe-area-inset-left, 0px)); border-right: 0; border-bottom: 1px solid var(--borda); overflow: visible; }
+body:not(.is-authenticated) .sidebar-brand { display: flex; align-items: baseline; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; text-align: left; }
+body:not(.is-authenticated) .brand-text { display: inline; }
+body:not(.is-authenticated) .navbar-brand { font-size: 30px; }
+body:not(.is-authenticated) .header-note { display: inline; white-space: nowrap; }
+body:not(.is-authenticated) .header-actions, body:not(.is-authenticated) .sidebar-user-controls { display: none; }
+body:not(.is-authenticated) .guest-actions { display: flex; flex: 0 0 auto; gap: 8px; }
+body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
+.guest-link { min-height: 40px; padding: 8px 18px; border: 1px solid var(--rosa); border-radius: 22px; background: #fff; color: var(--rosa-escuro); font-weight: 700; white-space: nowrap; }
+.guest-link:hover, .guest-link:focus-visible { background: var(--rosa-claro); }
+.guest-link-primary { border-color: var(--rosa); background: var(--rosa); color: #fff; }
+.guest-link-primary:hover, .guest-link-primary:focus-visible { background: var(--rosa-escuro); }
+.guest-link[aria-current="page"] { box-shadow: inset 0 0 0 1px var(--rosa-escuro); }
+@media (max-width: 800px) {
+  body:not(.is-authenticated) .header-note { display: none; }
+}
+@media (max-width: 600px) {
+  body:not(.is-authenticated) .site-sidebar { gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); }
+  body:not(.is-authenticated) .navbar-brand { font-size: 23px; }
+  .guest-actions { gap: 6px; }
+  .guest-link { padding: 7px 12px; font-size: 13px; }
+}
+@media (max-width: 360px) {
+  body:not(.is-authenticated) .navbar-brand { font-size: 20px; }
+  .guest-link { padding: 6px 9px; font-size: 12px; }
+}
