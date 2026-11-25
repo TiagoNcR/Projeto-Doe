@@ -65,7 +65,6 @@
         <button id="profile-avatar-button" class="profile-avatar-button hidden" type="button">
           <span id="profile-avatar-initials" class="profile-avatar-initials"></span>
           <img id="profile-avatar-image" class="profile-avatar-image hidden" alt="" />
-          <span class="profile-avatar-camera" aria-hidden="true">📷</span>
         </button>
       </div>
       <input
@@ -489,6 +488,26 @@
             <div id="donation-list" class="donation-list"></div>
           </div>
         </div>
+      </section>
+
+      <!-- PERFIL -->
+      <section id="profile-view" class="hidden" aria-labelledby="profile-name">
+        <header class="profile-header">
+          <div id="profile-avatar-slot" class="profile-avatar-slot"></div>
+          <div class="profile-info">
+            <span class="eyebrow">PERFIL</span>
+            <h1 id="profile-name"></h1>
+            <p id="profile-meta" class="muted"></p>
+            <ul id="profile-stats" class="profile-stats"></ul>
+          </div>
+          <div id="profile-actions" class="profile-actions"></div>
+        </header>
+        <div class="feed-filters profile-filters" role="group" aria-label="Filtrar conteúdos do perfil">
+          <button class="feed-filter active" type="button" data-profile-filter="all">Todas</button>
+          <button class="feed-filter" type="button" data-profile-filter="donation">Doações</button>
+          <button class="feed-filter" type="button" data-profile-filter="post">Publicações</button>
+        </div>
+        <div id="profile-list" class="feed-list"></div>
       </section>
     </main>
 

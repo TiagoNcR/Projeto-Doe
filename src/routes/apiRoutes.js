@@ -16,6 +16,7 @@ const routes = [
   { method: 'GET', pattern: /^\/api\/feed$/, handler: donationController.feed },
   { method: 'GET', pattern: /^\/api\/users\/([^/]+)\/avatar$/, handler: authController.avatar },
   { method: 'POST', pattern: /^\/api\/users\/([^/]+)\/follow$/, handler: socialController.toggleFollow },
+  { method: 'GET', pattern: /^\/api\/users\/([^/]+)\/profile$/, handler: socialController.profile },
   { method: 'GET', pattern: /^\/api\/conversations$/, handler: messageController.conversations },
   {
     method: 'GET',

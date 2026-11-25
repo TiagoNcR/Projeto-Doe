@@ -1,4 +1,4 @@
-const views = ['login', 'register', 'dashboard', 'feed', 'calendar', 'messages', 'donations'];
+const views = ['login', 'register', 'dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile'];
 const organizerRole = 'Instituição/Organizador';
 const alertArea = document.getElementById('alert-area');
 let currentUserData = null;
@@ -12,6 +12,9 @@ let activeConversationId = null;
 let messageRefreshTimer = null;
 let notificationRefreshTimer = null;
 let notificationRefreshInProgress = false;
+let profileUserId = null;
+let profileFilter = 'all';
+let profileItems = [];
 
 function escapeHTML(value = '') {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -47,6 +50,7 @@ async function logoutUser() {
   try {
     await api('/api/auth/logout', { method: 'POST' });
     currentUserData = null;
+    profileUserId = null;
     navigate('login');
     showAlert('Você saiu da sua conta.');
   } catch (error) {
@@ -56,7 +60,8 @@ async function logoutUser() {
 
 function navigate(view) {
   if (!views.includes(view)) return;
-  if (['dashboard', 'feed', 'calendar', 'messages', 'donations'].includes(view) && !currentUserData) view = 'login';
+  if (['dashboard', 'feed', 'calendar', 'messages', 'donations', 'profile'].includes(view) && !currentUserData) view = 'login';
+  if (view === 'profile' && !profileUserId) profileUserId = currentUserData.id;
   if (messageRefreshTimer) {
     clearInterval(messageRefreshTimer);
     messageRefreshTimer = null;
@@ -99,8 +104,78 @@ function navigate(view) {
     messageRefreshTimer = setInterval(refreshChat, 4000);
   }
   if (view === 'donations') loadMyDonations();
-  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : 'Doações'}`;
-  history.replaceState(null, '', view === 'login' ? '/' : `#${view}`);
+  if (view === 'profile') {
+    profileFilter = 'all';
+    loadProfile();
+  }
+  document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : 'Doações'}`;
+  history.replaceState(null, '', view === 'login' ? '/' : view === 'profile' ? `#profile/${encodeURIComponent(profileUserId)}` : `#${view}`);
+}
+
+function openProfile(userId) {
+  profileUserId = userId;
+  navigate('profile');
+  window.scrollTo(0, 0);
+}
+
+function memberSinceLabel(isoDate) {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return `Membro desde ${date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+}
+
+function countLabel(count, singular, plural) {
+  return `<li><strong>${count}</strong> ${count === 1 ? singular : plural}</li>`;
+}
+
+async function loadProfile() {
+  const requestedId = profileUserId;
+  try {
+    const data = await api(`/api/users/${encodeURIComponent(requestedId)}/profile`);
+    if (requestedId !== profileUserId || document.getElementById('profile-view').classList.contains('hidden')) return;
+    const { profile, stats } = data;
+    profileItems = data.items;
+    document.title = `Projeto Doe | ${profile.name}`;
+    document.getElementById('profile-avatar-slot').innerHTML = avatarMarkup(profile.name, profile.avatarUrl, 'profile-avatar-large');
+    document.getElementById('profile-name').textContent = profile.name;
+    document.getElementById('profile-meta').textContent = [profile.type, memberSinceLabel(profile.createdAt)].filter(Boolean).join(' · ');
+    document.getElementById('profile-stats').innerHTML = [
+      countLabel(stats.followers, 'seguidor', 'seguidores'),
+      countLabel(stats.following, 'seguindo', 'seguindo'),
+      countLabel(stats.donations, 'doação', 'doações'),
+      countLabel(stats.delivered, 'entregue', 'entregues'),
+      countLabel(stats.posts, 'publicação', 'publicações')
+    ].join('');
+    document.getElementById('profile-actions').innerHTML = data.isMe
+      ? '<button class="btn btn-outline-doe" type="button" data-change-avatar>Alterar foto</button>'
+      : `<button class="btn btn-outline-doe" type="button" data-message-user="${escapeHTML(profile.id)}">Mensagem</button>
+         <button class="btn ${data.followingUser ? 'btn-outline-doe' : 'btn-doe'}" type="button" data-follow="${escapeHTML(profile.id)}">${data.followingUser ? 'Seguindo' : 'Seguir'}</button>`;
+    renderProfileItems(data.isMe ? 'Você' : profile.name.split(' ')[0]);
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  }
+}
+
+function renderProfileItems(personLabel = '') {
+  document.querySelectorAll('[data-profile-filter]').forEach(button => {
+    button.classList.toggle('active', button.dataset.profileFilter === profileFilter);
+  });
+  const items = profileFilter === 'all' ? profileItems : profileItems.filter(item => item.kind === profileFilter);
+  const emptyText = {
+    all: 'ainda não publicou nada.',
+    donation: 'ainda não cadastrou doações.',
+    post: 'ainda não fez publicações.'
+  }[profileFilter];
+  const subject = personLabel || document.getElementById('profile-name').textContent.split(' ')[0];
+  document.getElementById('profile-list').innerHTML = items.length
+    ? items.map(renderFeedItem).join('')
+    : `<div class="empty-state">${escapeHTML(subject)} ${emptyText}</div>`;
+}
+
+// Recarrega a lista visível (feed ou perfil) depois de curtir, comentar, seguir etc.
+async function refreshSocialItems() {
+  if (!document.getElementById('profile-view').classList.contains('hidden')) return loadProfile();
+  return loadFeed();
 }
 
 async function updateDashboard() {
@@ -149,8 +224,8 @@ function renderProfileAvatar() {
   image.classList.toggle('hidden', !avatarUrl);
   if (avatarUrl) image.src = avatarUrl;
   else image.removeAttribute('src');
-  button.title = `Alterar foto de ${currentUserData.name}`;
-  button.setAttribute('aria-label', `Alterar foto de perfil de ${currentUserData.name}`);
+  button.title = 'Ver meu perfil';
+  button.setAttribute('aria-label', `Ver meu perfil (${currentUserData.name})`);
 }
 
 function renderNotificationCount(count) {
@@ -339,10 +414,10 @@ async function loadFeed() {
     const uniqueOwners = [...new Map(feedItems.map(item => [item.ownerId, item])).values()].slice(0, 10);
     document.getElementById('stories').innerHTML = uniqueOwners.length
       ? uniqueOwners.map(item => `
-          <article class="story">
+          <a class="story" href="#profile/${escapeHTML(item.ownerId)}" data-profile="${escapeHTML(item.ownerId)}" title="Ver perfil de ${escapeHTML(item.ownerName)}">
             ${avatarMarkup(item.ownerName, item.ownerAvatarUrl, 'story-avatar')}
             <span>${escapeHTML(item.ownerName.split(' ')[0])}</span>
-          </article>
+          </a>
         `).join('')
       : '<p class="muted mb-0">Seja o primeiro a compartilhar algo com a comunidade.</p>';
 
@@ -353,7 +428,13 @@ async function loadFeed() {
         : '<div class="empty-state">Ainda não há publicações na comunidade.</div>';
       return;
     }
-    list.innerHTML = feedItems.map(item => {
+    list.innerHTML = feedItems.map(renderFeedItem).join('');
+  } catch (error) {
+    showAlert(error.message, 'danger');
+  }
+}
+
+function renderFeedItem(item) {
       const isDonation = item.kind === 'donation';
       const collection = isDonation ? 'donations' : 'posts';
       const publicationText = isDonation
@@ -367,10 +448,10 @@ async function loadFeed() {
       return `
       <article class="social-post ${isDonation ? 'donation-post' : 'community-post'}">
         <header class="post-header">
-          <div class="post-author">
+          <a class="post-author" href="#profile/${escapeHTML(item.ownerId)}" data-profile="${escapeHTML(item.ownerId)}" title="Ver perfil de ${escapeHTML(item.ownerName)}">
             ${avatarMarkup(item.ownerName, item.ownerAvatarUrl, 'post-avatar')}
             <div class="post-author-text"><strong>${escapeHTML(item.ownerName)}</strong><small><span class="post-kind">${isDonation ? `${escapeHTML(item.category)} · ${escapeHTML(item.size)}` : 'Publicação da comunidade'}</span><time>· ${escapeHTML(timeLabel(item.createdAt))}</time></small></div>
-          </div>
+          </a>
           <div class="post-header-actions">
             ${item.ownerId !== currentUserData.id
               ? `<button class="message-button" type="button" data-message-user="${escapeHTML(item.ownerId)}" aria-label="Enviar mensagem para ${escapeHTML(item.ownerName)}" title="Mensagem">
@@ -404,10 +485,6 @@ async function loadFeed() {
         </div>
       </article>
     `;
-    }).join('');
-  } catch (error) {
-    showAlert(error.message, 'danger');
-  }
 }
 
 async function loadMyDonations() {
@@ -601,7 +678,7 @@ document.addEventListener('click', async event => {
       if (!data.alreadyInterested) showAlert('Interesse enviado! Continue a conversa com quem está doando.');
     } catch (error) {
       showAlert(error.message, 'danger');
-      await loadFeed();
+      await refreshSocialItems();
     }
   }
 
@@ -611,7 +688,7 @@ document.addEventListener('click', async event => {
       const collection = deleteButton.dataset.kind || 'donations';
       await api(`/api/${collection}/${deleteButton.dataset.delete}`, { method: 'DELETE' });
       if (collection === 'posts') {
-        await loadFeed();
+        await refreshSocialItems();
         showAlert('Publicação excluída com sucesso.');
       } else {
         await loadMyDonations();
@@ -628,7 +705,7 @@ document.addEventListener('click', async event => {
     try {
       const collection = likeButton.dataset.kind === 'post' ? 'posts' : 'donations';
       await api(`/api/${collection}/${likeButton.dataset.like}/like`, { method: 'POST' });
-      await loadFeed();
+      await refreshSocialItems();
     } catch (error) {
       showAlert(error.message, 'danger');
     }
@@ -638,13 +715,29 @@ document.addEventListener('click', async event => {
   if (followButton) {
     try {
       const { following } = await api(`/api/users/${followButton.dataset.follow}/follow`, { method: 'POST' });
-      await loadFeed();
+      await refreshSocialItems();
       showAlert(following
         ? 'Agora você está seguindo este participante.'
         : 'Você deixou de seguir este participante.');
     } catch (error) {
       showAlert(error.message, 'danger');
     }
+  }
+
+  const profileLink = event.target.closest('[data-profile]');
+  if (profileLink) {
+    event.preventDefault();
+    openProfile(profileLink.dataset.profile);
+  }
+
+  const profileFilterButton = event.target.closest('[data-profile-filter]');
+  if (profileFilterButton) {
+    profileFilter = profileFilterButton.dataset.profileFilter;
+    renderProfileItems();
+  }
+
+  if (event.target.closest('[data-change-avatar]')) {
+    document.getElementById('profile-avatar-input').click();
   }
 
   const filterButton = event.target.closest('[data-feed-filter]');
@@ -681,7 +774,7 @@ document.addEventListener('submit', async event => {
         method: 'POST',
         body: JSON.stringify({ text: input.value })
       });
-      await loadFeed();
+      await refreshSocialItems();
     } catch (error) {
       showAlert(error.message, 'danger');
     }
@@ -802,7 +895,7 @@ function readImage(file) {
 }
 
 document.getElementById('profile-avatar-button').addEventListener('click', () => {
-  document.getElementById('profile-avatar-input').click();
+  openProfile(currentUserData.id);
 });
 
 document.addEventListener('change', async event => {
@@ -844,6 +937,7 @@ document.getElementById('profile-avatar-input').addEventListener('change', async
     currentUserData = data.user;
     renderProfileAvatar();
     if (!document.getElementById('feed-view').classList.contains('hidden')) await loadFeed();
+    if (!document.getElementById('profile-view').classList.contains('hidden')) await loadProfile();
     if (!document.getElementById('messages-view').classList.contains('hidden')) {
       await loadConversations(activeConversationId);
     }
@@ -899,6 +993,11 @@ async function initialize() {
     currentUserData = null;
   }
   const requestedView = location.hash.slice(1);
+  const profileMatch = requestedView.match(/^profile\/(.+)$/);
+  if (currentUserData && profileMatch) {
+    openProfile(decodeURIComponent(profileMatch[1]));
+    return;
+  }
   navigate(currentUserData && views.includes(requestedView) ? requestedView : currentUserData ? 'feed' : 'login');
 }
 
