@@ -19,25 +19,45 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <aside class="site-sidebar">
+      <nav class="header-actions" aria-label="Navegação principal">
+        <button class="header-link hidden" id="header-dashboard" type="button" data-view="dashboard">Painel</button>
+        <button class="header-link hidden" id="header-feed" type="button" data-view="feed">Feed</button>
+        <button class="header-link hidden" id="header-calendar" type="button" data-view="calendar">Calendário</button>
+        <button class="header-link hidden" id="header-donations" type="button" data-view="donations">Cadastrar</button>
+        <button class="header-link hidden" id="header-messages" type="button" data-view="messages">Mensagens</button>
+        <button class="header-link hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta">Sair</button>
+      </nav>
+      <div class="sidebar-user-controls">
+        <button id="notification-bell" class="notification-bell hidden" type="button" data-view="messages" aria-label="Abrir mensagens" title="Abrir mensagens">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+            <path d="M10 21h4" />
+          </svg>
+          <span id="notification-badge" class="notification-badge hidden" aria-live="polite"></span>
+        </button>
+        <button id="profile-avatar-button" class="profile-avatar-button hidden" type="button">
+          <span id="profile-avatar-initials" class="profile-avatar-initials"></span>
+          <img id="profile-avatar-image" class="profile-avatar-image hidden" alt="" />
+          <span class="profile-avatar-camera" aria-hidden="true">📷</span>
+        </button>
+      </div>
+      <input
+        id="profile-avatar-input"
+        class="hidden"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+      />
+    </aside>
+    <div class="page-shell">
     <header class="site-header">
-      <nav class="navbar navbar-expand-lg">
+      <nav class="navbar">
         <div class="container">
-          <a class="navbar-brand" href="#" data-view="feed"
-            >Projeto Doe <span>♡</span></a
-          >
-          <div class="header-actions">
-            <button class="header-link hidden" id="header-dashboard" type="button" data-view="dashboard">Painel</button>
-            <button class="header-link hidden" id="header-feed" type="button" data-view="feed">Feed</button>
-            <button class="header-link hidden" id="header-calendar" type="button" data-view="calendar">Calendário</button>
-            <button class="header-link hidden" id="header-donations" type="button" data-view="donations">Cadastrar</button>
-            <button class="header-link hidden" id="header-messages" type="button" data-view="messages">Mensagens</button>
-            <button class="header-link hidden" id="header-logout" type="button" data-logout aria-label="Sair da conta">Sair</button>
-            <span class="header-note">Solidariedade que transforma</span>
-          </div>
+          <a class="navbar-brand" href="#" data-view="feed">Projeto Doe <span>♡</span></a>
+          <span class="header-note">Solidariedade que transforma</span>
         </div>
       </nav>
     </header>
-
     <main class="container app-container">
       <div id="alert-area" aria-live="polite"></div>
 
@@ -436,24 +456,7 @@
         <small>Projeto acadêmico - Engenharia de Computação</small>
       </div>
     </footer>
-    <button id="notification-bell" class="notification-bell hidden" type="button" data-view="messages" aria-label="Abrir mensagens" title="Abrir mensagens">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-        <path d="M10 21h4" />
-      </svg>
-      <span id="notification-badge" class="notification-badge hidden" aria-live="polite"></span>
-    </button>
-    <button id="profile-avatar-button" class="profile-avatar-button hidden" type="button">
-      <span id="profile-avatar-initials" class="profile-avatar-initials"></span>
-      <img id="profile-avatar-image" class="profile-avatar-image hidden" alt="" />
-      <span class="profile-avatar-camera" aria-hidden="true">📷</span>
-    </button>
-    <input
-      id="profile-avatar-input"
-      class="hidden"
-      type="file"
-      accept="image/png,image/jpeg,image/webp"
-    />
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/app.js"></script>
   </body>
