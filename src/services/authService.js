@@ -94,6 +94,46 @@ function logout(id) {
   saveDatabase();
 }
 
+function updateProfile(user, body) {
+  const name = String(body.name ?? user.name).trim();
+  const type = String(body.type ?? user.type);
+  if (name.length < 3 || name.length > 80) {
+    throw new HttpError(400, 'O nome deve ter entre 3 e 80 caracteres.');
+  }
+  if (!PROFILE_TYPES.has(type)) {
+    throw new HttpError(400, 'Selecione um tipo de participante válido.');
+  }
+  user.name = name;
+  user.type = type;
+  saveDatabase();
+  return user;
+}
+
+// Troca a senha e encerra as outras sessões da pessoa, mantendo a atual aberta.
+function changePassword(user, currentSessionId, body) {
+  const currentPassword = String(body.currentPassword || '');
+  const newPassword = String(body.newPassword || '');
+  const candidate = hashPassword(currentPassword, user.salt).hash;
+  if (!crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(user.hash))) {
+    throw new HttpError(400, 'A senha atual está incorreta.');
+  }
+  if (newPassword.length < 6) {
+    throw new HttpError(400, 'A nova senha deve ter pelo menos 6 caracteres.');
+  }
+  if (newPassword === currentPassword) {
+    throw new HttpError(400, 'A nova senha deve ser diferente da atual.');
+  }
+
+  Object.assign(user, hashPassword(newPassword));
+  const database = getDatabase();
+  const before = database.sessions.length;
+  database.sessions = database.sessions.filter(session =>
+    session.userId !== user.id || session.id === currentSessionId
+  );
+  saveDatabase();
+  return { endedSessions: before - database.sessions.length };
+}
+
 function updateProfileImage(user, value) {
   const image = typeof value === 'string' ? value : '';
   if (image.length > MAX_PROFILE_IMAGE_LENGTH) {
@@ -121,4 +161,12 @@ function getProfileImage(userId) {
   return { contentType: image.contentType, buffer: image.buffer };
 }
 
-module.exports = { getProfileImage, login, logout, register, updateProfileImage };
+module.exports = {
+  changePassword,
+  getProfileImage,
+  login,
+  logout,
+  register,
+  updateProfile,
+  updateProfileImage
+};

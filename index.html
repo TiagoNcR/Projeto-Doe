@@ -534,6 +534,31 @@
           </div>
           <div id="profile-actions" class="profile-actions"></div>
         </header>
+        <section id="profile-edit" class="profile-edit hidden" aria-labelledby="profile-edit-title">
+          <div class="profile-edit-heading">
+            <h2 id="profile-edit-title">Editar perfil</h2>
+            <button class="text-button" type="button" data-close-profile-edit>Fechar</button>
+          </div>
+          <form id="profile-edit-form" class="profile-edit-form">
+            <label for="profile-edit-name" class="form-label">Nome</label>
+            <input id="profile-edit-name" class="form-control" type="text" minlength="3" maxlength="80" autocomplete="name" required />
+            <label for="profile-edit-type" class="form-label mt-3">Como você participa?</label>
+            <select id="profile-edit-type" class="form-select" required></select>
+            <p class="profile-edit-note">O e-mail de acesso não pode ser alterado por aqui.</p>
+            <button class="btn btn-doe" type="submit">Salvar alterações</button>
+          </form>
+          <form id="password-form" class="profile-edit-form">
+            <h3>Alterar senha</h3>
+            <label for="password-current" class="form-label">Senha atual</label>
+            <input id="password-current" class="form-control" type="password" autocomplete="current-password" required />
+            <label for="password-new" class="form-label mt-3">Nova senha (mínimo 6 caracteres)</label>
+            <input id="password-new" class="form-control" type="password" minlength="6" autocomplete="new-password" required />
+            <label for="password-confirm" class="form-label mt-3">Confirme a nova senha</label>
+            <input id="password-confirm" class="form-control" type="password" minlength="6" autocomplete="new-password" required />
+            <p class="profile-edit-note">Ao trocar a senha, você sai da conta nos outros aparelhos.</p>
+            <button class="btn btn-outline-doe" type="submit">Alterar senha</button>
+          </form>
+        </section>
         <div class="feed-filters profile-filters" role="group" aria-label="Filtrar conteúdos do perfil">
           <button class="feed-filter active" type="button" data-profile-filter="all">Todas</button>
           <button class="feed-filter" type="button" data-profile-filter="donation">Doações</button>

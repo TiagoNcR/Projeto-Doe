@@ -26,6 +26,16 @@ async function updateAvatar(req, res) {
   sendJson(res, 200, { user: safeUser(authService.updateProfileImage(user, body.image)) });
 }
 
+async function updateProfile(req, res) {
+  const user = requireUser(req, 'Faça login para editar seu perfil.');
+  sendJson(res, 200, { user: safeUser(authService.updateProfile(user, await readJson(req))) });
+}
+
+async function changePassword(req, res) {
+  const user = requireUser(req, 'Faça login para alterar sua senha.');
+  sendJson(res, 200, authService.changePassword(user, sessionId(req), await readJson(req)));
+}
+
 function avatar(req, res, userId) {
   requireUser(req, 'Faça login para visualizar fotos de perfil.');
   const image = authService.getProfileImage(userId);
@@ -43,4 +53,4 @@ function logout(req, res) {
   sendJson(res, 200, { ok: true });
 }
 
-module.exports = { avatar, login, logout, me, register, updateAvatar };
+module.exports = { avatar, changePassword, login, logout, me, register, updateAvatar, updateProfile };

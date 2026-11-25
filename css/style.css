@@ -508,3 +508,16 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
 @media (pointer: coarse) {
   .donation-withdraw { min-height: 44px; padding: 0 6px; }
 }
+
+/* Edição do próprio perfil */
+.profile-edit { max-width: 620px; margin: 0 auto 24px; padding: 20px; border: 1px solid var(--borda); border-radius: 18px; background: #fff; }
+.profile-edit-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.profile-edit-heading h2 { margin: 0; color: var(--rosa-escuro); font-size: 1.25rem; }
+.profile-edit-form { display: grid; }
+.profile-edit-form + .profile-edit-form { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--borda); }
+.profile-edit-form h3 { margin: 0 0 8px; color: var(--rosa-escuro); font-size: 1.0625rem; }
+.profile-edit-form .btn { justify-self: start; margin-top: 4px; }
+.profile-edit-note { margin: 10px 0 12px; color: #88777d; font-size: 0.8125rem; }
+@media (pointer: coarse) {
+  [data-close-profile-edit] { min-height: 44px; }
+}

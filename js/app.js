@@ -137,6 +137,7 @@ function navigate(view, { history: historyMode = 'push', historyState } = {}) {
   if (view === 'notifications') loadNotifications();
   if (view === 'profile') {
     profileFilter = 'all';
+    closeProfileEdit();
     loadProfile();
   }
   document.title = `Projeto Doe | ${view === 'login' ? 'Login' : view === 'register' ? 'Cadastro' : view === 'dashboard' ? 'Painel' : view === 'feed' ? 'Feed' : view === 'calendar' ? 'Calendário' : view === 'messages' ? 'Mensagens' : view === 'profile' ? 'Perfil' : view === 'notifications' ? 'Notificações' : 'Doações'}`;
@@ -196,6 +197,23 @@ function openProfile(userId) {
   window.scrollTo(0, 0);
 }
 
+function openProfileEdit() {
+  const typeSelect = document.getElementById('profile-edit-type');
+  // As opções de tipo vêm do formulário de cadastro, para não duplicar a lista
+  if (!typeSelect.options.length) {
+    for (const option of document.getElementById('register-type').options) typeSelect.add(new Option(option.text, option.value));
+  }
+  document.getElementById('profile-edit-name').value = currentUserData.name;
+  typeSelect.value = currentUserData.type;
+  document.getElementById('password-form').reset();
+  document.getElementById('profile-edit').classList.remove('hidden');
+  document.getElementById('profile-edit-name').focus();
+}
+
+function closeProfileEdit() {
+  document.getElementById('profile-edit').classList.add('hidden');
+}
+
 function memberSinceLabel(isoDate) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return '';
@@ -225,7 +243,8 @@ async function loadProfile() {
       countLabel(stats.posts, 'publicação', 'publicações')
     ].join('');
     document.getElementById('profile-actions').innerHTML = data.isMe
-      ? '<button class="btn btn-outline-doe" type="button" data-change-avatar>Alterar foto</button>'
+      ? `<button class="btn btn-doe" type="button" data-edit-profile aria-controls="profile-edit">Editar perfil</button>
+         <button class="btn btn-outline-doe" type="button" data-change-avatar>Alterar foto</button>`
       : `<button class="btn btn-outline-doe" type="button" data-message-user="${escapeHTML(profile.id)}" data-message-name="${escapeHTML(profile.name)}">Mensagem</button>
          <button class="btn ${data.followingUser ? 'btn-outline-doe' : 'btn-doe'}" type="button" data-follow="${escapeHTML(profile.id)}">${data.followingUser ? 'Seguindo' : 'Seguir'}</button>`;
     renderProfileItems(data.isMe ? 'Você' : profile.name.split(' ')[0]);
@@ -994,6 +1013,9 @@ document.addEventListener('click', async event => {
     renderProfileItems();
   }
 
+  if (event.target.closest('[data-edit-profile]')) openProfileEdit();
+  if (event.target.closest('[data-close-profile-edit]')) closeProfileEdit();
+
   if (event.target.closest('[data-change-avatar]')) {
     document.getElementById('profile-avatar-input').click();
   }
@@ -1038,6 +1060,48 @@ document.addEventListener('submit', async event => {
         body: JSON.stringify({ text: input.value })
       });
       await refreshSocialItems();
+    } catch (error) {
+      showAlert(error.message, 'danger');
+    }
+  }
+
+  if (event.target.matches('#profile-edit-form')) {
+    event.preventDefault();
+    try {
+      const data = await api('/api/auth/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: document.getElementById('profile-edit-name').value,
+          type: document.getElementById('profile-edit-type').value
+        })
+      });
+      currentUserData = data.user;
+      renderProfileAvatar();
+      closeProfileEdit();
+      await loadProfile();
+      showAlert('Perfil atualizado.');
+    } catch (error) {
+      showAlert(error.message, 'danger');
+    }
+  }
+
+  if (event.target.matches('#password-form')) {
+    event.preventDefault();
+    const newPassword = document.getElementById('password-new').value;
+    if (newPassword !== document.getElementById('password-confirm').value) {
+      showAlert('A confirmação não é igual à nova senha.', 'warning');
+      document.getElementById('password-confirm').focus();
+      return;
+    }
+    try {
+      const data = await api('/api/auth/password', {
+        method: 'PUT',
+        body: JSON.stringify({ currentPassword: document.getElementById('password-current').value, newPassword })
+      });
+      event.target.reset();
+      showAlert(data.endedSessions
+        ? 'Senha alterada. Você saiu da conta nos outros aparelhos.'
+        : 'Senha alterada.');
     } catch (error) {
       showAlert(error.message, 'danger');
     }

@@ -12,6 +12,8 @@ const routes = [
   { method: 'POST', pattern: /^\/api\/auth\/register$/, handler: authController.register },
   { method: 'POST', pattern: /^\/api\/auth\/login$/, handler: authController.login },
   { method: 'PUT', pattern: /^\/api\/auth\/avatar$/, handler: authController.updateAvatar },
+  { method: 'PATCH', pattern: /^\/api\/auth\/profile$/, handler: authController.updateProfile },
+  { method: 'PUT', pattern: /^\/api\/auth\/password$/, handler: authController.changePassword },
   { method: 'POST', pattern: /^\/api\/auth\/logout$/, handler: authController.logout },
   { method: 'GET', pattern: /^\/api\/events$/, handler: postController.events },
   { method: 'GET', pattern: /^\/api\/feed$/, handler: donationController.feed },

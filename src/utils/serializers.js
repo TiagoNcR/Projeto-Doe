@@ -19,10 +19,21 @@ function safeUser(user) {
   };
 }
 
+// Comentários guardam uma cópia do nome; mostra o nome atual de quem comentou, se a pessoa ainda existir.
+function currentCommentNames(comments) {
+  if (!Array.isArray(comments)) return comments;
+  const users = getDatabase().users;
+  return comments.map(comment => {
+    const author = users.find(user => user.id === comment.userId);
+    return author ? { ...comment, name: author.name } : comment;
+  });
+}
+
 function publicDonation(item) {
   const owner = getDatabase().users.find(user => user.id === item.ownerId);
   return {
     ...item,
+    comments: currentCommentNames(item.comments),
     ownerName: owner ? owner.name : 'Participante',
     ownerAvatarUrl: avatarUrl(owner),
     ownerType: owner ? owner.type : 'Doador',
@@ -34,6 +45,7 @@ function publicPost(item) {
   const owner = getDatabase().users.find(user => user.id === item.ownerId);
   return {
     ...item,
+    comments: currentCommentNames(item.comments),
     ownerName: owner ? owner.name : 'Participante',
     ownerAvatarUrl: avatarUrl(owner),
     ownerType: owner ? owner.type : 'Doador',
