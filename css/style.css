@@ -33,7 +33,7 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .profile-avatar-image { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .profile-avatar-camera { position: absolute; right: -4px; bottom: -2px; width: 23px; height: 23px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: var(--rosa-escuro); font-size: 11px; }
 .page-shell { min-height: 100vh; margin-left: var(--sidebar-w); display: flex; flex-direction: column; }
-.app-container { width: 100%; flex: 1; min-height: 0; padding-top: 42px; padding-bottom: 65px; }
+.app-container { width: 100%; container-type: inline-size; flex: 1; min-height: 0; padding-top: 42px; padding-bottom: 65px; }
 .auth-layout { display: grid; grid-template-columns: 1.1fr .9fr; gap: 55px; align-items: center; max-width: 1080px; margin: 22px auto; }
 .auth-copy h1, .dashboard-top h1 { color: var(--rosa-escuro); font-size: clamp(32px, 4vw, 48px); font-weight: 800; line-height: 1.13; margin: 12px 0 18px; }
 .auth-copy p { font-size: 17px; line-height: 1.7; max-width: 540px; }
@@ -59,14 +59,14 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .hidden { display: none !important; }
 .dashboard-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 35px; }
 .dashboard-top h1 { font-size: 38px; margin-bottom: 8px; }
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 45px; }
+.stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-bottom: 45px; }
 .stat-card { display: flex; align-items: center; gap: 16px; background: #fff; padding: 22px; border: 1px solid var(--borda); border-radius: 17px; }
 .stat-icon { font-size: 32px; }
 .stat-card p { margin: 0 0 5px; color: #88777d; font-size: 13px; }
 .stat-card strong { color: var(--rosa-escuro); font-size: 23px; }
 .section-heading { margin: 20px 0; }
 .section-heading p { margin: 0; }
-.action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+.action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
 .action-card { text-align: left; background: #fff; border: 1px solid var(--borda); border-radius: 18px; padding: 25px; color: var(--texto); transition: .2s; }
 .action-card:focus-visible { border-color: var(--rosa); }
 .action-icon { display: block; font-size: 32px; margin-bottom: 12px; }
@@ -245,10 +245,6 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
   .profile-avatar-button { font-size: 13px; }
 }
 @media (max-width: 800px) {
-  .donations-layout { grid-template-columns: 1fr; gap: 25px; }
-  .feed-layout { grid-template-columns: 1fr; }
-  .feed-calendar-panel { position: static; }
-  .calendar-layout { grid-template-columns: 1fr; }
   /* Login e cadastro: título curto, formulário logo em seguida, apresentação abaixo */
   .auth-layout { grid-template-columns: minmax(0, 1fr); gap: 0; max-width: 560px; margin: 0 auto; }
   .auth-copy { display: contents; }
@@ -280,8 +276,7 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
   body.is-authenticated .page-shell { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
   .app-container { padding-top: 25px; }
   .auth-card { padding: 24px 19px; }
-  .stats-grid { grid-template-columns: 1fr; gap: 10px; }
-  .action-grid { grid-template-columns: 1fr; }
+  .stats-grid { gap: 10px; }
   .dashboard-top { align-items: flex-start; flex-direction: column; }
   .dashboard-top h1 { font-size: 32px; }
   .donation-item { align-items: flex-start; }
@@ -387,4 +382,25 @@ body:not(.is-authenticated) .page-shell { margin-left: 0; padding-bottom: 0; }
 /* Calendário em telas pequenas: um ponto indica que o dia tem eventos (o total segue no aria-label) */
 @media (max-width: 600px) {
   .calendar-event-count { width: 6px; height: 6px; overflow: hidden; border-radius: 50%; background: var(--rosa-escuro); font-size: 0; }
+}
+
+/* Layouts de duas colunas: dependem da largura disponível para o conteúdo
+   (descontada a barra lateral), não da largura da janela */
+@container (max-width: 720px) {
+  .feed-layout, .calendar-layout { grid-template-columns: minmax(0, 1fr); }
+  .feed-calendar-panel { position: static; }
+}
+@container (max-width: 640px) {
+  .donations-layout { grid-template-columns: minmax(0, 1fr); }
+}
+/* Cards de números: sempre 3 colunas; com pouco espaço o ícone vai para cima do texto */
+@container (max-width: 640px) {
+  .stat-card { flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; }
+  .stat-icon { font-size: 26px; line-height: 1; }
+}
+@container (max-width: 420px) {
+  .stats-grid { gap: 8px; }
+  .stat-card { padding: 12px; border-radius: 14px; }
+  .stat-card p { font-size: 12px; }
+  .stat-card strong { font-size: 20px; overflow-wrap: anywhere; }
 }
