@@ -181,9 +181,10 @@ body { margin: 0; background: var(--bege); color: var(--texto); font-family: Ari
 .donation-details { flex: 1; }
 .donation-details small { color: #9b8a8f; }
 .chat-layout { display: grid; grid-template-columns: minmax(240px, .75fr) 1.25fr; min-height: 560px; background: #fff; border: 1px solid var(--borda); border-radius: 18px; overflow: hidden; }
-.chat-sidebar { padding: 20px 14px; border-right: 1px solid var(--borda); }
+.chat-sidebar { min-width: 0; padding: 20px 14px; border-right: 1px solid var(--borda); }
 .chat-sidebar h2 { margin: 0 0 14px; color: var(--rosa-escuro); font-size: 1.25rem; }
-.conversation-list { display: grid; gap: 7px; }
+/* minmax(0, 1fr): sem isso a coluna cresce até caber a última mensagem inteira e invade a área do chat */
+.conversation-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; }
 .conversation-button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px; border: 0; border-radius: 12px; background: transparent; text-align: left; color: var(--texto); }
 .conversation-button.active { background: var(--rosa-claro); }
 .conversation-avatar { width: 42px; height: 42px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: var(--rosa); color: #fff; font-size: 0.8125rem; font-weight: 800; }
