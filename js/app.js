@@ -846,9 +846,15 @@ document.addEventListener('click', async event => {
   const notificationItem = event.target.closest('[data-notification-type]');
   if (notificationItem) {
     const type = notificationItem.dataset.notificationType;
-    if (type === 'follow') openProfile(notificationItem.dataset.notificationActor);
-    else if (type === 'interest') navigate('donations');
-    else openProfile(currentUserData.id);
+    if (type === 'follow') {
+      openProfile(notificationItem.dataset.notificationActor);
+    } else if (type === 'interest') {
+      // Abre a conversa com quem demonstrou interesse, que já começa com a mensagem citando a peça
+      activeConversationId = notificationItem.dataset.notificationActor;
+      navigate('messages');
+    } else {
+      openProfile(currentUserData.id);
+    }
   }
 
   const profileLink = event.target.closest('[data-profile]');
