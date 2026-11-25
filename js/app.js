@@ -82,7 +82,10 @@ function navigate(view) {
   }
   alertArea.innerHTML = '';
   if (view === 'dashboard') updateDashboard();
-  if (view === 'feed') loadFeed();
+  if (view === 'feed') {
+    loadFeed();
+    loadCalendarMonth();
+  }
   if (view === 'calendar') loadCalendarMonth();
   if (view === 'messages') {
     loadConversations(activeConversationId);
@@ -226,13 +229,16 @@ function renderCalendar() {
       : calendarEvents[0]?.eventDate || `${monthKey}-01`;
   }
 
-  document.getElementById('calendar-month-label').textContent = new Intl.DateTimeFormat('pt-BR', {
+  const monthLabel = new Intl.DateTimeFormat('pt-BR', {
     month: 'long',
     year: 'numeric'
   }).format(calendarMonth);
+  document.querySelectorAll('[data-calendar-month-label]').forEach(label => {
+    label.textContent = monthLabel;
+  });
 
   const cellCount = Math.ceil((firstDayOffset + daysInMonth) / 7) * 7;
-  document.getElementById('calendar-grid').innerHTML = Array.from({ length: cellCount }, (_, index) => {
+  const calendarGrid = Array.from({ length: cellCount }, (_, index) => {
     const day = index - firstDayOffset + 1;
     if (day < 1 || day > daysInMonth) return '<span class="calendar-day-empty" aria-hidden="true"></span>';
 
@@ -249,11 +255,16 @@ function renderCalendar() {
       </button>
     `;
   }).join('');
+  document.querySelectorAll('[data-calendar-grid]').forEach(grid => {
+    grid.innerHTML = calendarGrid;
+  });
 
-  document.getElementById('calendar-selected-label').textContent =
-    `Atividades em ${formatEventDate(calendarSelectedDate)}`;
+  const selectedLabel = `Atividades em ${formatEventDate(calendarSelectedDate)}`;
+  document.querySelectorAll('[data-calendar-selected-label]').forEach(label => {
+    label.textContent = selectedLabel;
+  });
   const eventsForDay = calendarEvents.filter(item => item.eventDate === calendarSelectedDate);
-  document.getElementById('calendar-event-list').innerHTML = eventsForDay.length
+  const eventList = eventsForDay.length
     ? eventsForDay.map(item => `
         <article class="calendar-event-card">
           <strong>${escapeHTML(item.ownerName)}</strong>
@@ -261,6 +272,9 @@ function renderCalendar() {
         </article>
       `).join('')
     : '<p class="calendar-empty">Não há atividades nesta data.</p>';
+  document.querySelectorAll('[data-calendar-event-list]').forEach(list => {
+    list.innerHTML = eventList;
+  });
 }
 
 async function loadCalendarMonth() {

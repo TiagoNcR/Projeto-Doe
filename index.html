@@ -253,37 +253,57 @@
             <button id="show-post-form" class="btn btn-doe" type="button">Fazer publicação</button>
           </div>
         </div>
-        <div class="post-composer">
-          <form id="post-form" class="post-form hidden">
-            <label for="post-content" class="form-label">O que você quer compartilhar?</label>
-            <textarea
-              id="post-content"
-              class="form-control"
-              rows="4"
-              maxlength="1000"
-              placeholder="Divulgue uma ação solidária, atividade ou novidade da comunidade..."
-              required
-            ></textarea>
-            <div id="post-event-date-field" class="hidden mt-3">
-              <label for="post-event-date" class="form-label">Data da atividade (opcional)</label>
-              <input id="post-event-date" class="form-control" type="date" />
-              <small class="form-text muted">A atividade aparecerá no calendário da comunidade.</small>
+        <div class="feed-layout">
+          <div class="feed-main">
+            <div class="post-composer">
+              <form id="post-form" class="post-form hidden">
+                <label for="post-content" class="form-label">O que você quer compartilhar?</label>
+                <textarea
+                  id="post-content"
+                  class="form-control"
+                  rows="4"
+                  maxlength="1000"
+                  placeholder="Divulgue uma ação solidária, atividade ou novidade da comunidade..."
+                  required
+                ></textarea>
+                <div id="post-event-date-field" class="hidden mt-3">
+                  <label for="post-event-date" class="form-label">Data da atividade (opcional)</label>
+                  <input id="post-event-date" class="form-control" type="date" />
+                  <small class="form-text muted">A atividade aparecerá no calendário da comunidade.</small>
+                </div>
+                <label for="post-image" class="form-label mt-3">Foto (opcional)</label>
+                <input id="post-image" class="form-control" type="file" accept="image/png,image/jpeg,image/webp" />
+                <div id="post-image-preview" class="image-preview hidden"></div>
+                <div class="post-form-actions">
+                  <button id="cancel-post" class="btn btn-outline-doe" type="button">Cancelar</button>
+                  <button class="btn btn-doe" type="submit">Publicar</button>
+                </div>
+              </form>
             </div>
-            <label for="post-image" class="form-label mt-3">Foto (opcional)</label>
-            <input id="post-image" class="form-control" type="file" accept="image/png,image/jpeg,image/webp" />
-            <div id="post-image-preview" class="image-preview hidden"></div>
-            <div class="post-form-actions">
-              <button id="cancel-post" class="btn btn-outline-doe" type="button">Cancelar</button>
-              <button class="btn btn-doe" type="submit">Publicar</button>
+            <div class="feed-filters" role="group" aria-label="Filtrar publicações">
+              <button class="feed-filter active" type="button" data-feed-filter="all">Todas</button>
+              <button class="feed-filter" type="button" data-feed-filter="following">Seguindo</button>
             </div>
-          </form>
+            <div id="stories" class="stories-row"></div>
+            <div id="feed-list" class="feed-list"></div>
+          </div>
+          <aside class="feed-calendar-panel" aria-label="Calendário da comunidade">
+            <div class="feed-calendar-heading">
+              <h2>Calendário</h2>
+              <div class="calendar-month-controls" aria-label="Navegar pelos meses">
+                <button class="calendar-month-button" type="button" data-calendar-month="-1" aria-label="Mês anterior">‹</button>
+                <strong data-calendar-month-label></strong>
+                <button class="calendar-month-button" type="button" data-calendar-month="1" aria-label="Próximo mês">›</button>
+              </div>
+            </div>
+            <div class="calendar-grid calendar-weekdays" aria-hidden="true">
+              <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
+            </div>
+            <div class="calendar-grid" role="grid" aria-label="Dias do mês" data-calendar-grid></div>
+            <h3 class="feed-calendar-selected-label" data-calendar-selected-label></h3>
+            <div data-calendar-event-list></div>
+          </aside>
         </div>
-        <div class="feed-filters" role="group" aria-label="Filtrar publicações">
-          <button class="feed-filter active" type="button" data-feed-filter="all">Todas</button>
-          <button class="feed-filter" type="button" data-feed-filter="following">Seguindo</button>
-        </div>
-        <div id="stories" class="stories-row"></div>
-        <div id="feed-list" class="feed-list"></div>
       </section>
 
       <!-- CALENDÁRIO -->
@@ -296,7 +316,7 @@
           </div>
           <div class="calendar-month-controls" aria-label="Navegar pelos meses">
             <button class="calendar-month-button" type="button" data-calendar-month="-1" aria-label="Mês anterior">‹</button>
-            <strong id="calendar-month-label"></strong>
+            <strong id="calendar-month-label" data-calendar-month-label></strong>
             <button class="calendar-month-button" type="button" data-calendar-month="1" aria-label="Próximo mês">›</button>
           </div>
         </div>
@@ -305,11 +325,11 @@
             <div class="calendar-grid calendar-weekdays" aria-hidden="true">
               <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
             </div>
-            <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="Dias do mês"></div>
+            <div id="calendar-grid" class="calendar-grid" role="grid" aria-label="Dias do mês" data-calendar-grid></div>
           </div>
           <aside class="calendar-events-panel">
-            <h2 id="calendar-selected-label"></h2>
-            <div id="calendar-event-list"></div>
+            <h2 id="calendar-selected-label" data-calendar-selected-label></h2>
+            <div id="calendar-event-list" data-calendar-event-list></div>
           </aside>
         </div>
       </section>
