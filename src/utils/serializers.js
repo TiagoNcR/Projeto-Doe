@@ -1,11 +1,18 @@
 const { getDatabase } = require('../repositories/jsonRepository');
 
+function imageUrl(imageId) {
+  return imageId ? `/api/images/${encodeURIComponent(imageId)}` : '';
+}
+
+// Cada foto nova recebe outro identificador, então o endereço já muda quando a foto muda.
 function avatarUrl(user) {
-  if (!user || !user.profileImage) return '';
-  const version = user.profileImageUpdatedAt
-    ? `?v=${encodeURIComponent(user.profileImageUpdatedAt)}`
-    : '';
-  return `/api/users/${encodeURIComponent(user.id)}/avatar${version}`;
+  return user ? imageUrl(user.profileImageId) : '';
+}
+
+// O registro guarda só o identificador da foto; a resposta leva o endereço dela em `image`.
+function withImageUrl(item) {
+  const { imageId, ...rest } = item;
+  return { ...rest, image: imageUrl(imageId) };
 }
 
 function safeUser(user) {
@@ -32,7 +39,7 @@ function currentCommentNames(comments) {
 function publicDonation(item) {
   const owner = getDatabase().users.find(user => user.id === item.ownerId);
   return {
-    ...item,
+    ...withImageUrl(item),
     comments: currentCommentNames(item.comments),
     ownerName: owner ? owner.name : 'Participante',
     ownerAvatarUrl: avatarUrl(owner),
@@ -44,7 +51,7 @@ function publicDonation(item) {
 function publicPost(item) {
   const owner = getDatabase().users.find(user => user.id === item.ownerId);
   return {
-    ...item,
+    ...withImageUrl(item),
     comments: currentCommentNames(item.comments),
     ownerName: owner ? owner.name : 'Participante',
     ownerAvatarUrl: avatarUrl(owner),
@@ -53,4 +60,4 @@ function publicPost(item) {
   };
 }
 
-module.exports = { avatarUrl, publicDonation, publicPost, safeUser };
+module.exports = { avatarUrl, imageUrl, publicDonation, publicPost, safeUser };

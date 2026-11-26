@@ -5,6 +5,15 @@ function sendJson(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
+function sendImage(res, image, cacheControl) {
+  res.writeHead(200, {
+    'Content-Type': image.contentType,
+    'Cache-Control': cacheControl,
+    'X-Content-Type-Options': 'nosniff'
+  });
+  res.end(image.buffer);
+}
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -40,4 +49,4 @@ function readJson(req) {
   });
 }
 
-module.exports = { readJson, sendJson };
+module.exports = { readJson, sendImage, sendJson };

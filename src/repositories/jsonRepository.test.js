@@ -16,7 +16,8 @@ test('uses a fresh database only when the file does not exist', () => {
       sessions: [],
       messages: [],
       notifications: [],
-      reports: []
+      reports: [],
+      images: {}
     });
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
@@ -78,4 +79,23 @@ test('normalizes social and message fields', () => {
   assert.deepEqual(database.posts[0].likes, []);
   assert.deepEqual(database.posts[0].comments, []);
   assert.deepEqual(database.messages[0].readBy, ['user-1']);
+});
+
+test('moves photos stored inside old records to the images collection', () => {
+  const photo = 'data:image/png;base64,AQID';
+  const database = normalizeDatabase({
+    users: [{ id: 'ana', profileImage: photo }, { id: 'bruno', profileImage: '' }],
+    donations: [{ id: 'casaco', image: photo }],
+    posts: [{ id: 'aviso', image: '' }]
+  });
+
+  const ids = [database.users[0].profileImageId, database.donations[0].imageId];
+  assert.equal(new Set(ids).size, 2);
+  for (const id of ids) assert.deepEqual(database.images[id], { contentType: 'image/png', data: 'AQID' });
+  assert.equal(Object.keys(database.images).length, 2);
+  assert.equal('profileImage' in database.users[0], false);
+  assert.equal('profileImage' in database.users[1], false);
+  assert.equal('image' in database.donations[0], false);
+  assert.equal('image' in database.posts[0], false);
+  assert.equal(database.posts[0].imageId, undefined);
 });

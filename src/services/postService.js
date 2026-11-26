@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
+const repository = require('../repositories/jsonRepository');
+const { getDatabase, saveDatabase } = repository;
 const { HttpError } = require('../utils/errors');
 const { publicPost } = require('../utils/serializers');
 const { validateOptionalDataImage } = require('../utils/images');
@@ -51,7 +52,7 @@ function createPost(user, body) {
   const post = {
     id: crypto.randomUUID(),
     text,
-    image,
+    imageId: image ? repository.putImage(image) : null,
     ownerId: user.id,
     likes: [],
     comments: [],
@@ -81,6 +82,7 @@ function removePost(user, id) {
   if (!post) throw new HttpError(404, 'Publicação não encontrada.');
   if (post.ownerId !== user.id) throw new HttpError(403, 'Você só pode excluir suas próprias publicações.');
   database.posts = database.posts.filter(item => item.id !== id);
+  repository.deleteImage(post.imageId);
   saveDatabase();
 }
 

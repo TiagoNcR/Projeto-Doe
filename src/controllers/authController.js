@@ -1,6 +1,6 @@
 const authService = require('../services/authService');
 const { clearSessionCookie, currentUser, requireUser, sessionId, setSessionCookie } = require('../middleware/session');
-const { readJson, sendJson } = require('../utils/http');
+const { readJson, sendImage, sendJson } = require('../utils/http');
 const { safeUser } = require('../utils/serializers');
 
 function me(req, res) {
@@ -36,15 +36,9 @@ async function changePassword(req, res) {
   sendJson(res, 200, authService.changePassword(user, sessionId(req), await readJson(req)));
 }
 
-function avatar(req, res, userId) {
+async function avatar(req, res, userId) {
   requireUser(req, 'Faça login para visualizar fotos de perfil.');
-  const image = authService.getProfileImage(userId);
-  res.writeHead(200, {
-    'Content-Type': image.contentType,
-    'Cache-Control': 'private, max-age=300',
-    'X-Content-Type-Options': 'nosniff'
-  });
-  res.end(image.buffer);
+  sendImage(res, await authService.getProfileImage(userId), 'private, max-age=300');
 }
 
 function logout(req, res) {

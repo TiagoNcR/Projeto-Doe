@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
+const repository = require('../repositories/jsonRepository');
+const { getDatabase, saveDatabase } = repository;
 const { HttpError } = require('../utils/errors');
 const { publicDonation } = require('../utils/serializers');
 const { validateRequiredDataImage } = require('../utils/images');
@@ -102,7 +103,7 @@ function createDonation(user, body) {
     size: String(body.size || 'Único'),
     condition: String(body.condition || 'Boa'),
     description: String(body.description || '').trim().slice(0, 180),
-    image,
+    imageId: repository.putImage(image),
     ownerId: user.id,
     status: 'available',
     reservedFor: null,
@@ -277,6 +278,7 @@ function removeDonation(user, id) {
     throw new HttpError(403, 'Você só pode excluir suas próprias doações.');
   }
   database.donations = database.donations.filter(item => item.id !== id);
+  repository.deleteImage(donation.imageId);
   saveDatabase();
 }
 

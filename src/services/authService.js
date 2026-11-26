@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { getDatabase, saveDatabase } = require('../repositories/jsonRepository');
+const repository = require('../repositories/jsonRepository');
+const { getDatabase, saveDatabase } = repository;
 const { HttpError } = require('../utils/errors');
 const { parseDataImage } = require('../utils/images');
 
@@ -141,24 +142,19 @@ function updateProfileImage(user, value) {
   }
   parseDataImage(image, MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_ERROR);
 
-  user.profileImage = image;
+  repository.deleteImage(user.profileImageId);
+  user.profileImageId = repository.putImage(image);
   user.profileImageUpdatedAt = new Date().toISOString();
   saveDatabase();
   return user;
 }
 
-function getProfileImage(userId) {
+async function getProfileImage(userId) {
   const user = getDatabase().users.find(item => item.id === userId);
   if (!user) throw new HttpError(404, 'Participante não encontrado.');
-
-  let image;
-  try {
-    image = parseDataImage(user.profileImage || '', MAX_PROFILE_IMAGE_BYTES, PROFILE_IMAGE_ERROR);
-  } catch {
-    image = null;
-  }
+  const image = user.profileImageId ? await repository.getImage(user.profileImageId) : null;
   if (!image) throw new HttpError(404, 'Foto de perfil não encontrada.');
-  return { contentType: image.contentType, buffer: image.buffer };
+  return image;
 }
 
 module.exports = {

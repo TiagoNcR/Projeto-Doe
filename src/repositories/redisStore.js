@@ -39,6 +39,19 @@ function createRedisStore({ url, token, prefix = 'projeto-doe', fetchImpl = glob
     async write(database, version) {
       // MSET grava as duas chaves de uma vez: ninguém lê dados novos com a versão antiga.
       await command(['MSET', dataKey, JSON.stringify(database), versionKey, version]);
+    },
+
+    async readImage(id) {
+      const value = await command(['GET', `${prefix}:image:${id}`]);
+      return value ? JSON.parse(value) : null;
+    },
+
+    async writeImage(id, image) {
+      await command(['SET', `${prefix}:image:${id}`, JSON.stringify(image)]);
+    },
+
+    async deleteImages(ids) {
+      if (ids.length) await command(['DEL', ...ids.map(id => `${prefix}:image:${id}`)]);
     }
   };
 }
