@@ -1394,8 +1394,9 @@ function previewImage(event, previewId) {
     preview.innerHTML = '';
     return;
   }
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-    showAlert('Selecione uma imagem PNG, JPG ou WebP com até 5 MB.', 'warning');
+  const problem = checkImageFile(file);
+  if (problem) {
+    showAlert(problem, 'warning');
     event.target.value = '';
     preview.classList.add('hidden');
     return;
@@ -1409,14 +1410,81 @@ function previewImage(event, previewId) {
   reader.readAsDataURL(file);
 }
 
-function readImage(file) {
-  if (!file) return Promise.resolve('');
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_ORIGINAL_IMAGE_BYTES = 25 * 1024 * 1024;
+// Limites do servidor; cada requisição precisa caber nos 4,5 MB aceitos por hospedagens como a Vercel.
+const MAX_UPLOAD_IMAGE_BYTES = 2.5 * 1024 * 1024;
+const MAX_AVATAR_IMAGE_BYTES = 2 * 1024 * 1024;
+const PHOTO_MAX_SIDE = 1600;
+const AVATAR_MAX_SIDE = 512;
+
+function blobToDataURL(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
     reader.onerror = () => reject(new Error('Não foi possível carregar a imagem.'));
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(blob);
   });
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível abrir esta imagem.')); };
+    image.src = url;
+  });
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+
+// Reduz a foto para no máximo `maxSide` pixels no lado maior e a comprime em WebP
+// (ou JPEG, nos navegadores que não geram WebP). Fotos de celular de vários MB viram poucas centenas de KB.
+async function compressImage(file, maxSide) {
+  const image = await loadImageElement(file);
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext('2d');
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  let blob = await canvasToBlob(canvas, 'image/webp', 0.82);
+  if (!blob || blob.type !== 'image/webp') {
+    // JPEG não tem transparência: pinta o fundo de branco antes de desenhar de novo.
+    context.globalCompositeOperation = 'destination-over';
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    blob = await canvasToBlob(canvas, 'image/jpeg', 0.85);
+  }
+  // Se a foto já era pequena e a compressão não ajudou, envia a original.
+  if (!blob || (scale === 1 && blob.size >= file.size)) return file;
+  return blob;
+}
+
+function checkImageFile(file) {
+  if (!IMAGE_TYPES.includes(file.type)) return 'Selecione uma imagem PNG, JPG ou WebP.';
+  if (file.size > MAX_ORIGINAL_IMAGE_BYTES) return 'Selecione uma imagem de até 25 MB.';
+  return '';
+}
+
+async function readImage(file, { maxSide = PHOTO_MAX_SIDE, maxBytes = MAX_UPLOAD_IMAGE_BYTES } = {}) {
+  if (!file) return '';
+  const problem = checkImageFile(file);
+  if (problem) throw new Error(problem);
+  let image = file;
+  try {
+    image = await compressImage(file, maxSide);
+  } catch {
+    image = file;
+  }
+  if (image.size > maxBytes) {
+    throw new Error('Não foi possível reduzir esta imagem o suficiente. Tente outra foto.');
+  }
+  return blobToDataURL(image);
 }
 
 document.getElementById('profile-avatar-button').addEventListener('click', () => {
@@ -1460,17 +1528,18 @@ document.getElementById('profile-avatar-input').addEventListener('change', async
   const file = input.files[0];
   if (!file) return;
 
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
-  if (!allowedTypes.includes(file.type) || file.size > 2 * 1024 * 1024) {
-    showAlert('Escolha uma foto PNG, JPG ou WebP de até 2 MB.', 'warning');
+  const problem = checkImageFile(file);
+  if (problem) {
+    showAlert(problem, 'warning');
     input.value = '';
     return;
   }
 
   try {
+    const image = await readImage(file, { maxSide: AVATAR_MAX_SIDE, maxBytes: MAX_AVATAR_IMAGE_BYTES });
     const data = await api('/api/auth/avatar', {
       method: 'PUT',
-      body: JSON.stringify({ image: await readImage(file) })
+      body: JSON.stringify({ image })
     });
     currentUserData = data.user;
     renderProfileAvatar();

@@ -7,8 +7,9 @@ const { validateOptionalDataImage } = require('../utils/images');
 const blockService = require('./blockService');
 
 const organizerRole = 'Instituição/Organizador';
-const MAX_POST_IMAGE_BYTES = 5 * 1024 * 1024;
-const POST_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 5 MB.';
+// Em base64 a foto cresce um terço; 2,5 MB cabem no limite de 4 MB por requisição.
+const MAX_POST_IMAGE_BYTES = 2.5 * 1024 * 1024;
+const POST_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 2,5 MB.';
 
 function isValidEventDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;

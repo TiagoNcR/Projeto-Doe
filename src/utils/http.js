@@ -14,6 +14,9 @@ function sendImage(res, image, cacheControl) {
   res.end(image.buffer);
 }
 
+// Hospedagens sem servidor, como a Vercel, recusam corpos acima de 4,5 MB.
+const MAX_BODY_LENGTH = 4 * 1024 * 1024;
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -21,9 +24,9 @@ function readJson(req) {
     req.on('data', chunk => {
       if (settled) return;
       body += chunk;
-      if (body.length > 6 * 1024 * 1024) {
+      if (body.length > MAX_BODY_LENGTH) {
         settled = true;
-        reject(new HttpError(413, 'Corpo da requisição muito grande'));
+        reject(new HttpError(413, 'O envio é grande demais. Tente uma foto menor.'));
         req.resume();
       }
     });
@@ -49,4 +52,4 @@ function readJson(req) {
   });
 }
 
-module.exports = { readJson, sendImage, sendJson };
+module.exports = { MAX_BODY_LENGTH, readJson, sendImage, sendJson };

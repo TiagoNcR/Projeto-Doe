@@ -150,3 +150,23 @@ test('photos saved inside the database by older versions move to their own keys'
   assert.doesNotMatch(store.data, /AQID/);
   assert.equal((await fetch(`${baseUrl}${item.image}`, { headers: { cookie } })).status, 200);
 });
+
+test('requests stay below the 4.5 MB accepted by serverless hosts', async () => {
+  const cookie = await signUp('ana@exemplo.com');
+  const post = image => fetch(`${baseUrl}/api/donations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ name: 'Casaco', category: 'Casacos', size: 'M', image })
+  });
+  const photoOf = bytes => `data:image/jpeg;base64,${Buffer.alloc(bytes, 7).toString('base64')}`;
+
+  const tooLargeBody = await post(photoOf(3.2 * 1024 * 1024));
+  assert.equal(tooLargeBody.status, 413);
+  assert.match((await tooLargeBody.json()).error, /grande demais/);
+
+  const tooLargePhoto = await post(photoOf(2.6 * 1024 * 1024));
+  assert.equal(tooLargePhoto.status, 400);
+  assert.match((await tooLargePhoto.json()).error, /2,5 MB/);
+
+  assert.equal((await post(photoOf(2.4 * 1024 * 1024))).status, 201);
+});

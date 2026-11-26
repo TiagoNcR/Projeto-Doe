@@ -8,8 +8,9 @@ const messageService = require('./messageService');
 const notificationService = require('./notificationService');
 const blockService = require('./blockService');
 
-const MAX_DONATION_IMAGE_BYTES = 5 * 1024 * 1024;
-const DONATION_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 5 MB.';
+// Em base64 a foto cresce um terço; 2,5 MB cabem no limite de 4 MB por requisição.
+const MAX_DONATION_IMAGE_BYTES = 2.5 * 1024 * 1024;
+const DONATION_IMAGE_ERROR = 'Envie uma imagem PNG, JPG ou WebP com até 2,5 MB.';
 const DONATION_STATUSES = new Set(['available', 'reserved', 'delivered']);
 
 function findDonation(id) {
