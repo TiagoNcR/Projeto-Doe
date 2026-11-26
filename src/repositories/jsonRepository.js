@@ -1,5 +1,7 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { storeFromEnvironment } = require('./redisStore');
 
 const databaseFile = path.join(__dirname, '..', '..', 'data.json');
 
@@ -70,14 +72,81 @@ function normalizeDatabase(database) {
   return normalized;
 }
 
-const database = normalizeDatabase(loadDatabase());
+// Sem banco remoto configurado, os dados ficam em data.json, como no uso local.
+// Com um Redis configurado (por exemplo, na Vercel), cada requisição chama refresh() antes
+// de começar e flush() antes de responder; saveDatabase() apenas marca que houve mudança.
+let remoteStore = storeFromEnvironment();
+let remoteVersion = null;
+let remoteLoaded = false;
+let pendingChanges = false;
+let queue = Promise.resolve();
+let database = remoteStore ? defaultDatabase() : normalizeDatabase(loadDatabase());
 
 function getDatabase() {
   return database;
 }
 
 function saveDatabase() {
+  if (remoteStore) {
+    pendingChanges = true;
+    return;
+  }
   fs.writeFileSync(databaseFile, JSON.stringify(database, null, 2));
 }
 
-module.exports = { getDatabase, loadDatabase, normalizeDatabase, saveDatabase };
+function usesRemoteStore() {
+  return Boolean(remoteStore);
+}
+
+// Usado pelos testes para trocar o Redis por um armazenamento falso.
+function useRemoteStore(store) {
+  remoteStore = store;
+  remoteVersion = null;
+  remoteLoaded = false;
+  pendingChanges = false;
+  database = defaultDatabase();
+}
+
+// Baixa os dados só quando outra instância gravou uma versão nova.
+async function refresh() {
+  if (!remoteStore) return;
+  if (remoteLoaded && !pendingChanges && (await remoteStore.readVersion()) === remoteVersion) return;
+  const { data, version } = await remoteStore.read();
+  database = normalizeDatabase(data || defaultDatabase());
+  remoteVersion = version;
+  remoteLoaded = true;
+  pendingChanges = false;
+}
+
+async function flush() {
+  if (!remoteStore || !pendingChanges) return;
+  const version = crypto.randomUUID();
+  try {
+    await remoteStore.write(database, version);
+    remoteVersion = version;
+    pendingChanges = false;
+  } catch (error) {
+    // As mudanças não foram gravadas: a próxima requisição recarrega o que está no Redis.
+    remoteLoaded = false;
+    throw error;
+  }
+}
+
+// Atende uma requisição por vez nesta instância, para que uma não troque os dados no meio da outra.
+function runExclusive(task) {
+  const result = queue.then(task);
+  queue = result.catch(() => {});
+  return result;
+}
+
+module.exports = {
+  flush,
+  getDatabase,
+  loadDatabase,
+  normalizeDatabase,
+  refresh,
+  runExclusive,
+  saveDatabase,
+  useRemoteStore,
+  usesRemoteStore
+};

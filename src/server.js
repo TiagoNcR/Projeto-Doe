@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const repository = require('./repositories/jsonRepository');
 const { handleApi } = require('./routes/apiRoutes');
 const { sendJson } = require('./utils/http');
 
@@ -45,15 +46,75 @@ function serveStatic(req, res) {
   });
 }
 
+const STORE_UNAVAILABLE = 'Não foi possível acessar o banco de dados. Tente novamente em instantes.';
+
+// Segura a resposta montada pelo controller até os dados serem gravados.
+function holdResponse(res) {
+  const writeHead = res.writeHead;
+  const end = res.end;
+  let head = null;
+  let body = null;
+  res.writeHead = (...args) => { head = args; return res; };
+  res.end = (...args) => { body = args; return res; };
+
+  function restore() {
+    res.writeHead = writeHead;
+    res.end = end;
+  }
+
+  return {
+    send() {
+      restore();
+      if (head) res.writeHead(...head);
+      res.end(...(body || []));
+    },
+    fail() {
+      restore();
+      res.removeHeader('Set-Cookie');
+      sendJson(res, 503, { error: STORE_UNAVAILABLE });
+    }
+  };
+}
+
+async function handleApiRequest(req, res, pathname) {
+  if (!repository.usesRemoteStore()) {
+    await handleApi(req, res, pathname);
+    return;
+  }
+
+  await repository.runExclusive(async () => {
+    try {
+      await repository.refresh();
+    } catch (error) {
+      console.error(error);
+      sendJson(res, 503, { error: STORE_UNAVAILABLE });
+      return;
+    }
+
+    const response = holdResponse(res);
+    await handleApi(req, res, pathname);
+    try {
+      await repository.flush();
+      response.send();
+    } catch (error) {
+      console.error(error);
+      response.fail();
+    }
+  });
+}
+
 function createServer() {
   return http.createServer((req, res) => {
     const pathname = new URL(req.url, 'http://localhost').pathname;
     if (pathname.startsWith('/api/')) {
-      handleApi(req, res, pathname);
+      handleApiRequest(req, res, pathname).catch(error => {
+        console.error(error);
+        if (!res.headersSent) sendJson(res, 500, { error: 'Erro interno do servidor.' });
+      });
       return;
     }
     serveStatic(req, res);
   });
 }
 
-module.exports = { createServer };
+module.exports = { createServer, handleApiRequest };
