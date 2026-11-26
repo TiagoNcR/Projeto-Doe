@@ -1,5 +1,6 @@
 # Nunca enviar dados locais ou arquivos que não fazem parte do site.
 data.json
+data.backup-*.json
 .data.json
 *.log
 .env

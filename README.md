@@ -81,6 +81,21 @@ Na Vercel não é possível gravar o `data.json`, então os dados ficam em um ba
 
 O banco começa vazio: as contas e doações do `data.json` local não são enviadas. Para testar o projeto localmente usando o mesmo banco, defina as mesmas variáveis antes do `npm start`.
 
+### Dados de demonstração
+
+`npm run seed:demo` cria seis contas fictícias (instituição, doadores e beneficiários), doações em todas as situações, publicações, atividades no calendário, conversas e notificações. Todas as contas usam a senha `demo1234`, por exemplo `ana@example.com` ou `instituto@example.com`.
+
+- Sem variáveis do Redis, os dados vão para o `data.json` local.
+- Para preencher o banco da Vercel, copie `KV_REST_API_URL` e `KV_REST_API_TOKEN` da aba **Storage** do projeto (em **.env.local**) e rode no PowerShell:
+
+  ```powershell
+  $env:KV_REST_API_URL="https://..."
+  $env:KV_REST_API_TOKEN="..."
+  npm run seed:demo
+  ```
+
+O script só preenche um banco vazio. Para apagar tudo e criar os dados de novo, use `npm run seed:demo -- --force`; no `data.json` local, uma cópia de segurança (`data.backup-*.json`) é salva antes.
+
 Como funciona a publicação:
 
 - `npm run build` copia somente `index.html`, `css/` e `js/` para `public/`, a pasta servida como arquivos estáticos.
