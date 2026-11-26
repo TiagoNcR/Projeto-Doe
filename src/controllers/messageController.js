@@ -1,11 +1,16 @@
 const donationService = require('../services/donationService');
 const messageService = require('../services/messageService');
+const notificationService = require('../services/notificationService');
 const { requireUser } = require('../middleware/session');
 const { readJson, sendJson } = require('../utils/http');
 
 function conversations(req, res) {
   const user = requireUser(req, 'Faça login para acessar suas mensagens.');
-  sendJson(res, 200, messageService.listConversations(user));
+  // Leva junto a contagem de notificações: uma única consulta periódica atualiza o sino inteiro.
+  sendJson(res, 200, {
+    ...messageService.listConversations(user),
+    unreadNotifications: notificationService.countUnread(user)
+  });
 }
 
 function messages(req, res, contactId) {

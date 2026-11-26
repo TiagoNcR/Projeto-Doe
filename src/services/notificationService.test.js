@@ -105,3 +105,17 @@ test('each person keeps at most the 100 most recent notifications', () => {
   assert.equal(listFor(ana).notifications.length, 30);
   assert.equal(listFor(ana).unreadCount, 100);
 });
+
+test('the unread count used by the bell matches the notification list and respects blocks', () => {
+  socialService.toggleLike(bruno, 'p1', 'post');
+  socialService.toggleFollow(bruno, 'ana');
+  assert.equal(notificationService.countUnread(ana), listFor(ana).unreadCount);
+  assert.equal(notificationService.countUnread(ana), 2);
+
+  ana.blocked = ['bruno'];
+  assert.equal(notificationService.countUnread(ana), 0);
+  delete ana.blocked;
+
+  notificationService.markAllAsRead(ana);
+  assert.equal(notificationService.countUnread(ana), 0);
+});

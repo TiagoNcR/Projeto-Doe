@@ -58,10 +58,18 @@ function removeNotification(event) {
   database.notifications = notifications().filter(item => !sameEvent(item, event));
 }
 
+function visibleNotifications(user) {
+  const hidden = blockService.hiddenUserIds(user);
+  return notifications().filter(item => item.userId === user.id && !hidden.has(item.actorId));
+}
+
+function countUnread(user) {
+  return visibleNotifications(user).filter(item => !item.read).length;
+}
+
 function listNotifications(user) {
   const users = getDatabase().users;
-  const hidden = blockService.hiddenUserIds(user);
-  const mine = notifications().filter(item => item.userId === user.id && !hidden.has(item.actorId));
+  const mine = visibleNotifications(user);
   const latest = mine.slice().reverse().slice(0, LIST_LIMIT).map(item => {
     const actor = users.find(entry => entry.id === item.actorId);
     return {
@@ -95,4 +103,4 @@ function markAllAsRead(user) {
   return { unreadCount: 0 };
 }
 
-module.exports = { addNotification, listNotifications, markAllAsRead, removeNotification };
+module.exports = { addNotification, countUnread, listNotifications, markAllAsRead, removeNotification };

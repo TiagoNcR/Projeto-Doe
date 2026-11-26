@@ -9,9 +9,14 @@ let calendarEvents = [];
 let calendarSelectedDate = '';
 let conversationContacts = [];
 let activeConversationId = null;
-let messageRefreshTimer = null;
-let notificationRefreshTimer = null;
 let notificationRefreshInProgress = false;
+
+// Consultas periódicas: cada uma é uma execução da função na hospedagem, então o app só consulta
+// com a aba visível, uma requisição por vez, e espaça as consultas quando a pessoa fica parada.
+const POLL_DELAYS = { chat: 4000, chatIdle: 12000, bell: 10000, bellIdle: 30000 };
+const POLL_IDLE_AFTER = 60000;
+let pollTimer = null;
+let lastActivityAt = Date.now();
 let profileUserId = null;
 let profileFilter = 'all';
 let profileItems = [];
@@ -91,14 +96,7 @@ function navigate(view, { history: historyMode = 'push', historyState } = {}) {
   if (['dashboard', 'feed', 'calendar', 'messages', 'donations', 'my-donations', 'profile', 'notifications'].includes(view) && !currentUserData) view = 'login';
   currentView = view;
   if (view === 'profile' && !profileUserId) profileUserId = currentUserData.id;
-  if (messageRefreshTimer) {
-    clearInterval(messageRefreshTimer);
-    messageRefreshTimer = null;
-  }
-  if (notificationRefreshTimer) {
-    clearInterval(notificationRefreshTimer);
-    notificationRefreshTimer = null;
-  }
+  stopPolling();
   document.body.classList.remove('chat-open');
   views.forEach(name => {
     document.getElementById(`${name}-view`).classList.toggle('hidden', name !== view);
@@ -117,7 +115,7 @@ function navigate(view, { history: historyMode = 'push', historyState } = {}) {
   renderProfileAvatar();
   if (currentUserData) {
     if (view !== 'messages') refreshNotifications();
-    notificationRefreshTimer = setInterval(refreshNotifications, 10000);
+    schedulePoll();
   } else {
     renderNotificationCount(0);
   }
@@ -131,7 +129,6 @@ function navigate(view, { history: historyMode = 'push', historyState } = {}) {
   if (view === 'messages') {
     if (activeConversationId) showConversationShell(activeConversationId);
     loadConversations(activeConversationId, { autoSelectUnread: chatShowsBothPanes() });
-    messageRefreshTimer = setInterval(refreshChat, 4000);
   }
   if (view === 'my-donations') loadMyDonations();
   if (view === 'notifications') loadNotifications();
@@ -525,18 +522,16 @@ async function refreshNotifications() {
   const userId = currentUserData.id;
   notificationRefreshInProgress = true;
   try {
-    const [conversationData, notificationData] = await Promise.all([
-      api('/api/conversations'),
-      api('/api/notifications')
-    ]);
+    // A lista de conversas já traz as mensagens e as notificações não lidas: uma requisição só.
+    const data = await api('/api/conversations');
     if (currentUserData?.id !== userId) return;
-    unreadNotificationCount = notificationData.unreadCount;
-    renderConversationNotificationCount(conversationData.conversations);
+    unreadNotificationCount = Number(data.unreadNotifications) || 0;
+    renderConversationNotificationCount(data.conversations);
     if (!document.getElementById('messages-view').classList.contains('hidden')) {
-      conversationContacts = conversationData.conversations;
+      conversationContacts = data.conversations;
       renderConversationList();
     }
-    if (!document.getElementById('notifications-view').classList.contains('hidden') && notificationData.unreadCount) {
+    if (!document.getElementById('notifications-view').classList.contains('hidden') && unreadNotificationCount) {
       await loadNotifications();
     }
   } catch (error) {
@@ -971,14 +966,23 @@ async function loadConversationMessages(contactId) {
 
 let conversationRequestId = 0;
 
-async function loadConversations(selectedId = activeConversationId, { autoSelectUnread = false } = {}) {
+// Resumo da conversa aberta na última consulta, para saber se é preciso baixar as mensagens de novo.
+function conversationSnapshot(contact) {
+  return contact ? `${contact.id}|${contact.lastMessageAt}|${contact.unreadCount}` : '';
+}
+
+async function loadConversations(selectedId = activeConversationId, { autoSelectUnread = false, background = false } = {}) {
   const requestId = ++conversationRequestId;
+  const previousContact = conversationContacts.find(item => item.id === selectedId);
+  const previousSnapshot = conversationSnapshot(previousContact);
+  const previousNotifications = unreadNotificationCount;
   try {
     const data = await api('/api/conversations');
     // Uma busca mais nova já foi feita (ex.: a pessoa tocou numa conversa enquanto a lista atualizava);
     // aplicar esta resposta antiga desfaria a escolha.
     if (requestId !== conversationRequestId) return;
     conversationContacts = data.conversations;
+    if (data.unreadNotifications !== undefined) unreadNotificationCount = Number(data.unreadNotifications) || 0;
     renderConversationNotificationCount(conversationContacts);
     activeConversationId = conversationContacts.some(contact => contact.id === selectedId)
       ? selectedId
@@ -995,8 +999,12 @@ async function loadConversations(selectedId = activeConversationId, { autoSelect
     if (currentView === 'messages' && routeFor('messages') !== currentRoute()) updateHistory('replace');
     if (contact) {
       document.getElementById('chat-title').textContent = contact.name;
-      loadChatDonations(contact.id);
-      await loadConversationMessages(contact.id);
+      const messagesChanged = conversationSnapshot(contact) !== previousSnapshot;
+      // Reservas e entregas geram notificação; sem mensagem nova nem notificação nova, nada mudou na barra.
+      const notificationsChanged = unreadNotificationCount !== previousNotifications;
+      if (background && messagesChanged) markActivity();
+      if (!background || messagesChanged || notificationsChanged) loadChatDonations(contact.id);
+      if (!background || messagesChanged) await loadConversationMessages(contact.id);
     }
   } catch (error) {
     showAlert(error.message, 'danger');
@@ -1005,8 +1013,60 @@ async function loadConversations(selectedId = activeConversationId, { autoSelect
 
 async function refreshChat() {
   if (document.getElementById('messages-view').classList.contains('hidden')) return;
-  await loadConversations(activeConversationId);
+  await loadConversations(activeConversationId, { background: true });
 }
+
+function isIdle() {
+  return Date.now() - lastActivityAt > POLL_IDLE_AFTER;
+}
+
+function pollDelay() {
+  if (currentView === 'messages') return isIdle() ? POLL_DELAYS.chatIdle : POLL_DELAYS.chat;
+  return isIdle() ? POLL_DELAYS.bellIdle : POLL_DELAYS.bell;
+}
+
+function stopPolling() {
+  clearTimeout(pollTimer);
+  pollTimer = null;
+}
+
+// Agenda a próxima consulta só depois que a anterior termina, para nunca acumular requisições.
+function schedulePoll(delay = pollDelay()) {
+  stopPolling();
+  if (!currentUserData || document.hidden) return;
+  pollTimer = setTimeout(runPoll, delay);
+}
+
+async function runPoll() {
+  pollTimer = null;
+  try {
+    if (currentView === 'messages') await refreshChat();
+    else await refreshNotifications();
+  } finally {
+    if (!pollTimer) schedulePoll();
+  }
+}
+
+function markActivity() {
+  const wasIdle = isIdle();
+  lastActivityAt = Date.now();
+  // Quem volta a usar o app depois de um tempo parado recebe as novidades na hora.
+  if (wasIdle && currentUserData && !document.hidden) schedulePoll(0);
+}
+
+['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(type => {
+  window.addEventListener(type, markActivity, { passive: true });
+});
+
+// Com a aba em segundo plano não há consultas; ao voltar, atualiza na hora.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPolling();
+    return;
+  }
+  lastActivityAt = Date.now();
+  schedulePoll(0);
+});
 
 function resetPostComposer() {
   const form = document.getElementById('post-form');
