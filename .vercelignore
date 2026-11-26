@@ -1,0 +1,10 @@
+# Nunca enviar dados locais ou arquivos que não fazem parte do site.
+data.json
+.data.json
+*.log
+.env
+node_modules/
+public/
+docs/
+checks/
+reference/

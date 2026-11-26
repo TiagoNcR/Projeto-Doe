@@ -71,6 +71,22 @@ Faça uma cópia de segurança de `data.json` antes de removê-lo ou substituí-
 
 Se `data.json` existir, mas estiver inválido ou inacessível, o servidor encerra a inicialização com uma mensagem de erro em vez de iniciar com um banco vazio e sobrescrever os dados.
 
+## Publicar na Vercel
+
+Na Vercel não é possível gravar o `data.json`, então os dados ficam em um banco Redis (Upstash). Localmente nada muda: sem as variáveis do Redis, o projeto continua usando o `data.json`.
+
+1. No painel da Vercel, use **Add New → Project** e importe este repositório do GitHub. As configurações de build já estão no `vercel.json`; não é preciso alterá-las.
+2. No projeto criado, abra **Storage**, crie um banco **Upstash for Redis** (o plano gratuito é suficiente) e conecte-o ao projeto. A Vercel cria as variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` (o projeto também aceita `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`). Se o painel pedir um prefixo para as variáveis, deixe o padrão.
+3. Faça um novo deploy (**Deployments → Redeploy**) para que a função passe a usar essas variáveis.
+
+O banco começa vazio: as contas e doações do `data.json` local não são enviadas. Para testar o projeto localmente usando o mesmo banco, defina as mesmas variáveis antes do `npm start`.
+
+Como funciona a publicação:
+
+- `npm run build` copia somente `index.html`, `css/` e `js/` para `public/`, a pasta servida como arquivos estáticos.
+- `api/index.js` é a função que atende todas as rotas `/api/*`, usando as mesmas rotas do servidor local.
+- O `.vercelignore` impede que `data.json` e outros arquivos locais sejam enviados em um deploy feito pelo terminal.
+
 ## API principal
 
 As rotas abaixo são atendidas pelo servidor Node.js. As rotas de publicação, curtida, comentário, seguir, mensagens e exclusão exigem uma sessão, criada por cookie HTTP. Cadastro e login criam essa sessão.
