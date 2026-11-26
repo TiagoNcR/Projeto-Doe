@@ -622,7 +622,8 @@ function renderCalendar() {
   const monthKey = calendarMonthKey();
   const year = calendarMonth.getFullYear();
   const month = calendarMonth.getMonth();
-  const firstDayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+  // A semana começa no domingo, como nos calendários brasileiros (getDay(): 0 = domingo).
+  const firstDayOffset = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
   const currentMonthKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
