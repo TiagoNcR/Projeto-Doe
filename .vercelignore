@@ -5,7 +5,6 @@ data.backup-*.json
 *.log
 .env
 node_modules/
-public/
 docs/
 checks/
 reference/

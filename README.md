@@ -75,7 +75,7 @@ Se `data.json` existir, mas estiver inválido ou inacessível, o servidor encerr
 
 Na Vercel não é possível gravar o `data.json`, então os dados ficam em um banco Redis (Upstash). Localmente nada muda: sem as variáveis do Redis, o projeto continua usando o `data.json`.
 
-1. No painel da Vercel, use **Add New → Project** e importe este repositório do GitHub. As configurações de build já estão no `vercel.json`; não é preciso alterá-las.
+1. No painel da Vercel, use **Add New → Project** e importe este repositório do GitHub. Não é preciso alterar nenhuma configuração de build.
 2. No projeto criado, abra **Storage**, crie um banco **Upstash for Redis** (o plano gratuito é suficiente) e conecte-o ao projeto. A Vercel cria as variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` (o projeto também aceita `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`). Se o painel pedir um prefixo para as variáveis, deixe o padrão.
 3. Faça um novo deploy (**Deployments → Redeploy**) para que a função passe a usar essas variáveis.
 
@@ -98,8 +98,9 @@ O script só preenche um banco vazio. Para apagar tudo e criar os dados de novo,
 
 Como funciona a publicação:
 
-- `npm run build` copia somente `index.html`, `css/` e `js/` para `public/`, a pasta servida como arquivos estáticos.
-- `api/index.js` é a função que atende todas as rotas `/api/*`, usando as mesmas rotas do servidor local.
+- A Vercel reconhece o `server.js` e publica o projeto como um servidor Node, o mesmo usado localmente: ele atende a API e entrega `index.html`, `css/style.css` e `js/app.js`. Nenhum outro arquivo da pasta é público.
+- Na Vercel, o servidor só inclui no pacote os arquivos citados pelo código. Por isso `src/server.js` lista os arquivos públicos com caminhos fixos; um arquivo público novo precisa ser acrescentado a essa lista.
+- Sem o Redis configurado, a API responde avisando que falta conectar o banco.
 - O `.vercelignore` impede que `data.json` e outros arquivos locais sejam enviados em um deploy feito pelo terminal.
 
 ## API principal
